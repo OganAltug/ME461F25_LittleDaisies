@@ -1,0 +1,15 @@
+1-) These files need to upload to ros_ws.
+2-) Set initialization accordingly.
+	-cd to your ros workspace or create a new one
+	-to create a new ros ws make a new folder
+	-run colcon build in the new folder
+	-make the source directory with mkdir src
+	-cp me461task1 folder to src
+	-then "colcon build" again at top of the folder
+	-after building don't forget to "source install/setup.[YOUR_TERMINAL]"
+3-) Run these files in a Ros node.
+    3.1 -) ros2 run me461task1 hand_gesture_publisher_node
+    3.2 -) ros2 run me461task1 game_controller_node
+4-) Run the snake_deneme.py file.
+5-) Up down right left is defined in the controller. Also when you close your hand it works as pressing space.
+6-) Pointer finger works as pressing down. Okey sign works as clicking. 
