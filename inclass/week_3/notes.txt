@@ -1,0 +1,31 @@
+1 - reload() function reloads the differences that has done in the class.
+
+2 - if you add "__" before the variable such as "self.__age", righht now age 
+attribute is not accesible publically.
+
+3 - if you use # in your file that describes the code, it called as a docstring
+
+4 - when u are using python in terminal u can clear the page with ctrl+l
+
+5 - write your code as fool proof as posible that your code does not crash
+
+6 - @property dives us the variable so that we can get the variable in a function 
+but not look like a function
+
+7 - @Age.setter gives us the setter properties. Age is given us in the getter function
+
+8 - every time a person created gives us the information about the person, also with 
+every person add a count and print the count for that person, also with the deleted 
+person update the count
+
+9 - __repr__ function does the representative of the object.
+
+10 - inclass example --> write a vector class as an abstract class, abstract class 
+contains dot product as an abstract function, you can add and subtract vector
+objects, when you multiply 2 vector objects if it is 2D it workes as a dot product
+if it is 3D works as a cross product, needles to say, 2D and 3D vectors are different 
+classes that inherit abstaract vector class
+
+11 - hw --> Create a menu that gives us the options to select if two objects collide what 
+be next. Red collide red becomes what, blue collides green becomes what. The rules are 
+up to us. They need to bounce when they collide, their mass proportion to the areas.
