@@ -143,10 +143,11 @@ def reverse_text():
     try:
         while True:
             text = input("Enter text to reverse (Ctrl+C to exit): ")
-            print("Reversed:", text[::-1])
+            rev_text = "".join(reversed(text))
+            print("Reversed:", rev_text)
     except KeyboardInterrupt:
         print("\nReturning to main menu...\n")
-
+        
 # ===== Main Loop =====
 while True:
     choice = main_menu()
