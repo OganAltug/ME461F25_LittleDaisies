@@ -1,0 +1,39 @@
+1 - you can use resistors to divide voltage
+
+2 - you can use online emulators to use pico, arduino, esp etc.  --> wokwi
+
+3 - every microcontroller has a clock inside it. it generates a pulse in 1/x Hz of a
+second. and also every microcontroller has a counter or timer in it. it counts the 
+ticks and create a time according to the 1/x Hz of a second.
+
+4 - pico has 133 mHz frequency.
+
+5 - ksps --> kilo sample per second
+
+6 - if there is a file named boot.py, it will execute first. if exist main.py, it 
+execute and it doesthe main thing that we want. if there are any library files, 
+put them into the lib directory.
+
+7 - PIO --> programmable I/O. this is the closest thing to hard coding. 
+instructions: JMP, WAIT, IN, OUT, PUSH, PUL, MOV, IRG, and SET
+
+8 - when you need a precisely timed code, use PIO. 
+
+9 - read the datasheet for rasp pi pico. get into it.
+
+10 - you can use thonny, vscode -if you ad microPyhton- 
+
+11 - you can use rshell, screen, 
+
+12 - repl --> read evaluate print loop
+
+13 - download latest firmware for pico w
+
+14 - First pico challange:
+    1. LED blink
+    2. Heart Beat
+    3. calculator
+    4. display onboard temperature reading
+    5. reverse the given text
+
+    notes: write a code that do not crash.
