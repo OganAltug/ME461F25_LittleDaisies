@@ -2,13 +2,31 @@ from machine import Pin, ADC, PWM
 from time import sleep, sleep_ms
 import sys
 
-# Define onboard LED (GP25 on Pico)
-led_pin = 25
+#for temperature reading
+import ds18x20
+import onewire
+
+
+# Define onboard LED (GP13 on Pico)
+led_pin = 13
 led = Pin(led_pin, Pin.OUT)
 
 # Define ADC for onboard temperature sensor (ADC4)
 sensor_temp = ADC(4)
 conversion_factor = 3.3 / (65535)
+
+
+
+# Define the DS18B20 data pin
+DATA_PIN = machine.Pin(22)  # Use the GPIO pin you connected the sensor data pin to
+
+# Create the onewire object
+ds_sensor = ds18x20.DS18X20(onewire.OneWire(DATA_PIN))
+
+# Scan for DS18B20 devices on the bus
+roms = ds_sensor.scan()
+
+
 
 # Heartbeat LED on GP15 (can use an external LED if you prefer)
 heartbeat_led = PWM(Pin(15))
@@ -83,6 +101,8 @@ def calculator():
     try:
         while True:
             expr = input("Enter an expression (Ctrl+C to exit): ")
+            if (expr.startswith('"') and expr.endswith('"')) or (expr.startswith("'") and expr.endswith("'")):
+                expr = expr[1:-1]
             try:
                 result = eval(expr)
                 print("Result:", result)
@@ -90,6 +110,22 @@ def calculator():
                 print("Invalid expression.")
     except KeyboardInterrupt:
         print("\nReturning to main menu...\n")
+
+#def temperature_display():
+#    try:
+#        print("Press Ctrl+C to stop.")
+#        while True:
+#            ds_sensor.convert_temp()
+#            sleep(0.5)
+#
+#            for rom in roms:
+#                temperature = ds_sensor.read_temp(rom)
+#                print("Temperature: {:.2f}°C".format(temperature))
+#            
+#            sleep(1/3)  # update 3 times per second
+#    except KeyboardInterrupt:
+#        print("\nReturning to main menu...\n")
+
 
 def temperature_display():
     try:
@@ -101,16 +137,15 @@ def temperature_display():
             sleep(1/3)  # update 3 times per second
     except KeyboardInterrupt:
         print("\nReturning to main menu...\n")
+        
 
 def reverse_text():
     try:
         while True:
             text = input("Enter text to reverse (Ctrl+C to exit): ")
-            rev_text = "".join(reversed(text))
-            print("Reversed:", rev_text)
+            print("Reversed:", text[::-1])
     except KeyboardInterrupt:
         print("\nReturning to main menu...\n")
-
 
 # ===== Main Loop =====
 while True:
