@@ -1,3 +1,7 @@
+#for the wokwi files https://wokwi.com/projects/369228178686431233
+
+
+
 from machine import Pin, ADC, PWM
 from time import sleep, sleep_ms
 import sys
@@ -147,7 +151,7 @@ def reverse_text():
             print("Reversed:", rev_text)
     except KeyboardInterrupt:
         print("\nReturning to main menu...\n")
-        
+
 # ===== Main Loop =====
 while True:
     choice = main_menu()
