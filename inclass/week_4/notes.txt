@@ -2,9 +2,9 @@
 
 2 - you can use online emulators to use pico, arduino, esp etc.  --> wokwi
 
-3 - every microcontroller has a clock inside it. it generates a pulse in 1/x Hz of a
-second. and also every microcontroller has a counter or timer in it. it counts the 
-ticks and create a time according to the 1/x Hz of a second.
+3 - every microcontroller has a clock inside it. it generates a pulse in 1/x Hz of 
+a second. and also every microcontroller has a counter or timer in it. it counts 
+the ticks and create a time according to the 1/x Hz of a second.
 
 4 - pico has 133 mHz frequency.
 
@@ -37,3 +37,22 @@ instructions: JMP, WAIT, IN, OUT, PUSH, PUL, MOV, IRG, and SET
     5. reverse the given text
 
     notes: write a code that do not crash.
+
+15 - shennons 
+
+16 - how to read potansiometer with resistor and capasitor.
+
+17 - how to implement a ossiloscope with a pico, its nothing but a A/D converter. 
+look into what a scope it. easist thing to visualize pwm signal. then signal 
+generator. at least saw tooth, square, wave, exponantial shapes. the amplitude 
+should be between 0-3.3V. 
+
+18 - RC filtering for signal reading and creating
+
+19 - low duty cycle with a 1 ms of frequency, we cannot see that it is open or it 
+will not be shiner. we can change the working amount with pwm.
+
+20 - design a game and test in wokwi emulator:
+    1. use dot matrix led display (MAX7219)
+    2. there has to be at least 1 potantiomator and 2 buttons.
+    3. upload wokwi files and screenshot of design.

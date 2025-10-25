@@ -115,6 +115,12 @@ def calculator():
     except KeyboardInterrupt:
         print("\nReturning to main menu...\n")
 
+
+#this line of code is for outside temperature with an additional sensor.
+#to run this line of code comment the temperature_display() function
+#and uncomment the other temperature_display() code.
+
+
 #def temperature_display():
 #    try:
 #        print("Press Ctrl+C to stop.")
