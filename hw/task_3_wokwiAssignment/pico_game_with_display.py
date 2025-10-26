@@ -104,10 +104,10 @@ class GunGame(GameSystem):
         # State machine
         self.game_state = "MENU" # MENU, GAME, GAME_WON, GAME_OVER
         self.menu_selection = 0
-        self.difficulty_levels = ["EASY", "MEDIUM", "HARD", "NIGHTMAR"] # NITE = Nightmare
+        self.difficulty_levels = ["EASY", "MECH", "HARD", "MEDIUM"] # MECH = Nightmare
         self.difficulty_map = {
             "EASY": "easy", "MEDIUM": "medium", 
-            "HARD": "hard", "NIGHTMARE": "nightmare"
+            "HARD": "hard", "MECH": "nightmare"
         }
         
         # Button debouncing
