@@ -104,10 +104,10 @@ class GunGame(GameSystem):
         # State machine
         self.game_state = "MENU" # MENU, GAME, GAME_WON, GAME_OVER
         self.menu_selection = 0
-        self.difficulty_levels = ["EASY", "MEDIUM", "HARD", "NIGHTMAR"] # NITE = Nightmare
+        self.difficulty_levels = ["EASY", "MECH", "HARD", "MEDIUM"] # NITE = Nightmare
         self.difficulty_map = {
             "EASY": "easy", "MEDIUM": "medium", 
-            "HARD": "hard", "NIGHTMARE": "nightmare"
+            "HARD": "hard", "MECH": "nightmare"
         }
         
         # Button debouncing
@@ -269,7 +269,7 @@ class GunGame(GameSystem):
         self.player_y = int((raw_y / 65535) * (self.display_height - 1))
 
         pot_val = pots_raw['right']
-        desired_factor = 1.0 + ((65535 - pot_val) / 65535) * 2.0
+        desired_factor = 1.0 + ((pot_val) / 65535) * 2.0
         
         if self.slowdown_budget <= 0 and desired_factor > 1.0:
             self.slowdown_factor = 1.0
