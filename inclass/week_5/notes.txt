@@ -1,0 +1,54 @@
+1 - Yeterince hızlı okumaktansa hangi hızda yazdığın önemli.
+
+2 - It has to be repeatable for creating perfectly periodic signal waves.
+
+3 - General Purpose Input Output / Programmable Input Output
+
+4 - Polling is constantly asking
+
+5 - Interrupt service routine , called when interrupt happen
+
+6 - 1 to 0 or 0 to 1 is a toggle event.
+
+7 - If button pressed, it freezes the actual code and isr block executed. After 
+that it continiue to the main code.
+
+8 - first in first out is queue, last in first out, first in last out is stack
+
+9 - due to the continious interrupt it becomes stack overflow. Pico will be froze.
+
+10 - falling interrupt, rising interrupt, changing interrupt,
+GPIO interrupt, timer interrupt, register interrupt
+
+11 - We can interrupt the interrupt to intervene the pico to freeze
+
+12 - We may loose data when we interrupt the interrupt
+
+13 - We will make an ENCODER. Design will be ours.
+
+14 - If your code interrupted to much, it would be better useing PIO pins. They
+are faster.
+
+15 - PICO microchip - RP24
+
+16 - If you change bits, it is called masking
+
+17 - In datasheets what register do what explained well.
+
+18 - How can we change bits in bytes.
+
+19 - If there is a pin and a bar above it, it implies if selected it is zero. 
+Otherwise it is HIGH.
+
+20 - Half of bite is nibelling. With 4 bits we can define hexadecimal address.
+
+21 - PIN communicates with each other. To syncronize the pins we need other pin.
+That called clock pin.
+
+22 - With the clock it is syncronize communication, without the clock it is 
+asyncronize communication.
+
+23 - We will write our own communication protocol.
+
+24 - SHort presentation on sampling problem. Sampling theorem sais that 2 sample
+in every period.
