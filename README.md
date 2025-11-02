@@ -16,7 +16,7 @@ It is collaboratively maintained by:
 | **hw/** | Homework assignments, including implementations such as the *Pico Game with brightness functionality*. |
 | **inclass/** | In-class notes, datasheets, and examples — e.g., *pico datasheet* and *week_4 materials*. |
 | **komponentler/** | Contains component lists, reference documents, and setup notes for Raspberry Pi Pico hardware. |
-| **pico/** | Code examples, additional notes, and microcontroller-specific scripts (e.g., PWM, ADC, GPIO usage). |
+| **pico/** | Additional notes, and microcontroller-specific scripts (e.g., PWM, ADC, GPIO usage). |
 | **README.md** | Project documentation and overview. |
 
 ---
@@ -38,16 +38,6 @@ This repository aims to:
 - Serve as a shared workspace for hardware interfacing and embedded programming practice  
 
 ---
-
-## 📈 Current Progress
-
-- ✅ Pico Game with adjustable brightness implemented  
-- ✅ Pico datasheet and Week 4 materials added  
-- ✅ Component documentation updated  
-- 🕒 More experiments and final project code to be added soon  
-
----
-
 
 ## 🧩 License
 
