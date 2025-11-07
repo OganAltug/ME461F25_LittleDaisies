@@ -1,0 +1,1202 @@
+Your assignment is to build a 2 player tetris game with micropython designed to run on a raspberry pi pico w and a pc.
+Pc client should also be written in python.
+
+Game will run on pico and game control inputs will be given from a pc via both over usb and wifi.
+User will be able to select their communication preference when the program starts.
+
+Game will be displayed on 16x32 dot matrix display consisting of max7219 displays. 16 pixel side should be the bottom.
+All game states also will be published to the pc and game will be displayed on a virtual 16x32 dot matrix screen on the pc.
+
+Game will be played by two players, each will player will be given their on pieces and they will only control their piece.
+Player will colloborate and play in same arena. They need to work together to place pieces, delete lines and gain points.
+Players should be given the pieces at the same time, first player to place their piece should wait for the other to get their new piece.
+Game input will be given from pc as wasd and arrows key for direction control for players 1 and 2 respectively.
+There also will be inputs to rotate their piece.
+
+When a line clears, cleared lines should flicker momentarily.
+For the real 16x32 display game screen should be very minimal, only pieces should be displayed.
+However, for the pc client total points, next piece screens can be added next to the 16x32 screen.
+
+Navigation through game menus should be done with game control inputs and menu should be displayed both on pi pico terminal and dot matrix.
+Also very simple represantaion of the game should be printed to pico terminal if possible while playing.
+
+Here is the result of this prompt:
+
+pc code:
+
+# pc_tetris_client.py
+# PC Client for Pico Tetris
+# Requires: pip install pygame pyserial
+
+import pygame
+import serial
+import socket
+import time
+import sys
+import json
+import threading
+import queue
+
+# ---------------------------------------------------------------
+# Configuration
+# ---------------------------------------------------------------
+
+# --- Serial (USB) Config ---
+# Find your Pico's COM port (e.g., 'COM3' on Windows, '/dev/ttyACM0' on Linux)
+SERIAL_PORT = "/dev/ttyACM0" 
+SERIAL_BAUDRATE = 115200
+
+# --- WiFi Config ---
+# This MUST match the IP your Pico gets from DHCP or its static IP
+PICO_IP = "192.168.1.100"  # Change this!
+PICO_PORT = 8080
+
+# --- Pygame Config ---
+GRID_WIDTH = 16
+GRID_HEIGHT = 32
+BLOCK_SIZE = 20  # Size of each block in pixels
+BORDER_SIZE = 1
+
+# Calculate window size
+GAME_AREA_WIDTH = (BLOCK_SIZE + BORDER_SIZE) * GRID_WIDTH + BORDER_SIZE
+GAME_AREA_HEIGHT = (BLOCK_SIZE + BORDER_SIZE) * GRID_HEIGHT + BORDER_SIZE
+
+INFO_PANEL_WIDTH = 200
+WINDOW_WIDTH = GAME_AREA_WIDTH + INFO_PANEL_WIDTH
+WINDOW_HEIGHT = GAME_AREA_HEIGHT
+
+# Colors
+COLOR_BLACK = (0, 0, 0)
+COLOR_WHITE = (255, 255, 255)
+COLOR_GRID = (40, 40, 40)
+COLOR_P1 = (255, 87, 34)   # Deep Orange
+COLOR_P2 = (33, 150, 243)  # Blue
+COLOR_STATIC = (158, 158, 158) # Grey
+COLOR_BG = (10, 10, 10)
+
+# Color map for grid values
+COLOR_MAP = {
+    0: COLOR_BG,
+    1: COLOR_P1,
+    2: COLOR_P2,
+    3: COLOR_STATIC
+}
+
+# ---------------------------------------------------------------
+# Tetromino Mini-Display
+# ---------------------------------------------------------------
+
+# Shapes for the "Next" display
+TETROMINOES = {
+    'O': [(0, 0), (1, 0), (0, 1), (1, 1)],
+    'I': [(0, 1), (1, 1), (2, 1), (3, 1)],
+    'S': [(1, 0), (2, 0), (0, 1), (1, 1)],
+    'Z': [(0, 0), (1, 0), (1, 1), (2, 1)],
+    'L': [(0, 1), (1, 1), (2, 1), (2, 0)],
+    'J': [(0, 1), (1, 1), (2, 1), (0, 0)],
+    'T': [(1, 1), (0, 1), (2, 1), (1, 0)]
+}
+
+def draw_mini_shape(surface, shape_key, x_offset, y_offset):
+    """Draws a small shape in the info panel."""
+    if not shape_key or shape_key not in TETROMINOES:
+        return
+        
+    shape = TETROMINOES[shape_key]
+    mini_block_size = 10
+    
+    for (px, py) in shape:
+        # Center the 4x4 shape in the area
+        draw_x = x_offset + px * (mini_block_size + 1)
+        draw_y = y_offset + py * (mini_block_size + 1)
+        pygame.draw.rect(surface, COLOR_STATIC, 
+                         (draw_x, draw_y, mini_block_size, mini_block_size))
+
+# ---------------------------------------------------------------
+# Communication Thread
+# ---------------------------------------------------------------
+
+class CommunicationThread(threading.Thread):
+    """Handles all serial/socket communication in a separate thread."""
+    def __init__(self, mode, input_queue, output_queue):
+        super().__init__(daemon=True)
+        self.mode = mode
+        self.input_q = input_queue  # Data from Pico (game state)
+        self.output_q = output_queue # Data to Pico (key presses)
+        self.connection = None
+        self.running = True
+
+    def connect(self):
+        """Establish the connection."""
+        if self.mode == "USB":
+            try:
+                self.connection = serial.Serial(SERIAL_PORT, SERIAL_BAUDRATE, timeout=0.1)
+                print(f"Connected to {SERIAL_PORT}")
+                return True
+            except serial.SerialException as e:
+                print(f"Error connecting to {SERIAL_PORT}: {e}")
+                return False
+        
+        elif self.mode == "WIFI":
+            try:
+                self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.connection.connect((PICO_IP, PICO_PORT))
+                self.connection.settimeout(0.1)
+                print(f"Connected to {PICO_IP}:{PICO_PORT}")
+                return True
+            except socket.error as e:
+                print(f"Error connecting to {PICO_IP}: {e}")
+                return False
+        return False
+
+    def run(self):
+        """Main loop for the thread."""
+        if not self.connect():
+            self.input_q.put({"error": "Connection Failed"})
+            return
+            
+        buffer = ""
+        while self.running:
+            # 1. Send data to Pico
+            try:
+                while not self.output_q.empty():
+                    key_press = self.output_q.get_nowait()
+                    if self.mode == "USB":
+                        self.connection.write(key_press.encode('utf-8'))
+                    elif self.mode == "WIFI":
+                        self.connection.sendall(key_press.encode('utf-8'))
+            except Exception as e:
+                print(f"Error sending data: {e}")
+                self.running = False
+                break
+
+            # 2. Receive data from Pico
+            try:
+                if self.mode == "USB":
+                    # Read all available bytes
+                    bytes_waiting = self.connection.in_waiting
+                    if bytes_waiting > 0:
+                        raw_data = self.connection.read(bytes_waiting)
+                        buffer += raw_data.decode('utf-8', errors='ignore')
+                    
+                    # Process buffer line by line
+                    if '\n' in buffer:
+                        data, buffer = buffer.split('\n', 1)
+                        data = data.strip()
+                    else:
+                        data = None
+
+                elif self.mode == "WIFI":
+                    # Read until newline
+                    buffer += self.connection.recv(1024).decode('utf-8')
+                    if '\n' in buffer:
+                        data, buffer = buffer.split('\n', 1)
+                        data = data.strip()
+                    else:
+                        data = None
+                
+                if data:
+                    try:
+                        # Pico sends JSON strings
+                        game_state = json.loads(data)
+                        self.input_q.put(game_state)
+                    except json.JSONDecodeError:
+                        # Pico might also send debug print()s. Ignore them.
+                        print(f"Pico debug: {data}")
+                        pass
+                        
+            except serial.SerialTimeoutException:
+                        pass # Normal timeout
+            except socket.timeout:
+                pass # Normal timeout
+            except Exception as e:
+                print(f"Error receiving data: {e}")
+                self.running = False
+        
+        # Cleanup
+        if self.connection:
+            self.connection.close()
+        print("Communication thread stopped.")
+
+# ---------------------------------------------------------------
+# Main Pygame Class
+# ---------------------------------------------------------------
+
+class PygameClient:
+    def __init__(self):
+        pygame.init()
+        pygame.display.set_caption("Pico Tetris - 2 Player")
+        self.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+        self.clock = pygame.time.Clock()
+        self.font_big = pygame.font.SysFont(None, 50)
+        self.font_medium = pygame.font.SysFont(None, 30)
+        
+        self.comm_mode = self.show_menu()
+        if self.comm_mode is None:
+            sys.exit()
+            
+        self.game_state_q = queue.Queue()
+        self.input_q = queue.Queue()
+        
+        self.comm_thread = CommunicationThread(self.comm_mode, self.game_state_q, self.input_q)
+        self.comm_thread.start()
+        
+        self.current_state = {
+            "grid": [0] * (GRID_WIDTH * GRID_HEIGHT),
+            "score": 0,
+            "p1_next": "",
+            "p2_next": "",
+            "game_over": False
+        }
+        self.error_message = None
+
+    def show_menu(self):
+        """Displays a menu to select connection mode."""
+        title_text = self.font_big.render("Pico Tetris", True, COLOR_WHITE)
+        usb_text = self.font_medium.render("1: Play over USB", True, COLOR_WHITE)
+        wifi_text = self.font_medium.render("2: Play over WiFi", True, COLOR_WHITE)
+        
+        while True:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    return None
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_1:
+                        return "USB"
+                    if event.key == pygame.K_2:
+                        return "WIFI"
+
+            self.screen.fill(COLOR_BG)
+            self.screen.blit(title_text, (WINDOW_WIDTH // 2 - title_text.get_width() // 2, 100))
+            self.screen.blit(usb_text, (WINDOW_WIDTH // 2 - usb_text.get_width() // 2, 200))
+            self.screen.blit(wifi_text, (WINDOW_WIDTH // 2 - wifi_text.get_width() // 2, 250))
+            pygame.display.flip()
+            self.clock.tick(15)
+
+    def run_game(self):
+        """Main game loop for Pygame."""
+        running = True
+        while running:
+            # 1. Handle Pygame Events (Input)
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                if event.type == pygame.KEYDOWN:
+                    self.handle_keydown(event.key)
+            
+            # 2. Get Game State from Pico
+            try:
+                while not self.game_state_q.empty():
+                    new_state = self.game_state_q.get_nowait()
+                    if "error" in new_state:
+                        self.error_message = new_state["error"]
+                        running = False
+                    else:
+                        self.current_state = new_state
+            except queue.Empty:
+                pass
+                
+            if not self.comm_thread.is_alive() and not self.error_message:
+                self.error_message = "Connection Lost"
+                
+            # 3. Draw Everything
+            self.draw()
+            
+            self.clock.tick(60) # Run at 60 FPS
+            
+        # Stop thread and quit
+        self.comm_thread.running = False
+        self.comm_thread.join(timeout=1)
+        pygame.quit()
+        if self.error_message:
+            print(f"Exiting due to error: {self.error_message}")
+
+    def handle_keydown(self, key):
+        """Map pygame keys to single-char commands for Pico."""
+        key_map = {
+            # Player 1
+            pygame.K_w: 'w',
+            pygame.K_a: 'a',
+            pygame.K_s: 's',
+            pygame.K_d: 'd',
+            
+            # Player 2
+            pygame.K_UP:    'u',
+            pygame.K_LEFT:  'l',
+            pygame.K_DOWN:  'n',
+            pygame.K_RIGHT: 'r',
+        }
+        if key in key_map:
+            self.input_q.put(key_map[key])
+
+    def draw(self):
+        """Draw the entire game screen."""
+        self.screen.fill(COLOR_BG)
+        
+        self.draw_grid()
+        self.draw_info_panel()
+        
+        if self.current_state.get("game_over", False):
+            self.draw_game_over()
+            
+        if self.error_message:
+            self.draw_error()
+
+        pygame.display.flip()
+
+    def draw_grid(self):
+        """Draw the 16x32 game grid."""
+        grid_data = self.current_state["grid"]
+        
+        for i in range(len(grid_data)):
+            x = i % GRID_WIDTH
+            y = i // GRID_WIDTH
+            
+            color = COLOR_MAP.get(grid_data[i], COLOR_BLACK)
+            
+            # Calculate position
+            draw_x = (BLOCK_SIZE + BORDER_SIZE) * x + BORDER_SIZE
+            draw_y = (BLOCK_SIZE + BORDER_SIZE) * y + BORDER_SIZE
+            
+            pygame.draw.rect(self.screen, color, 
+                             (draw_x, draw_y, BLOCK_SIZE, BLOCK_SIZE))
+                             
+    def draw_info_panel(self):
+        """Draw the side panel with score and next pieces."""
+        panel_x = GAME_AREA_WIDTH
+        
+        # --- Score ---
+        score_text = self.font_big.render("SCORE", True, COLOR_WHITE)
+        score_val = self.font_big.render(str(self.current_state["score"]), True, COLOR_WHITE)
+        
+        self.screen.blit(score_text, (panel_x + (INFO_PANEL_WIDTH - score_text.get_width()) // 2, 50))
+        self.screen.blit(score_val, (panel_x + (INFO_PANEL_WIDTH - score_val.get_width()) // 2, 100))
+
+        # --- Player 1 Next ---
+        p1_text = self.font_medium.render("P1 Next", True, COLOR_P1)
+        self.screen.blit(p1_text, (panel_x + (INFO_PANEL_WIDTH - p1_text.get_width()) // 2, 200))
+        draw_mini_shape(self.screen, self.current_state.get("p1_next", ""), 
+                        panel_x + (INFO_PANEL_WIDTH // 2) - (2 * 11), 240) # Center shape
+
+        # --- Player 2 Next ---
+        p2_text = self.font_medium.render("P2 Next", True, COLOR_P2)
+        self.screen.blit(p2_text, (panel_x + (INFO_PANEL_WIDTH - p2_text.get_width()) // 2, 350))
+        draw_mini_shape(self.screen, self.current_state.get("p2_next", ""), 
+                        panel_x + (INFO_PANEL_WIDTH // 2) - (2 * 11), 390) # Center shape
+
+    def draw_game_over(self):
+        """Display a 'Game Over' overlay."""
+        overlay = pygame.Surface((GAME_AREA_WIDTH, 200), pygame.SRCALPHA)
+        overlay.fill((50, 50, 50, 200)) # Semi-transparent grey
+        
+        text1 = self.font_big.render("GAME OVER", True, COLOR_WHITE)
+        text2 = self.font_medium.render("Pico will restart in 5s", True, COLOR_WHITE)
+        
+        overlay.blit(text1, ( (GAME_AREA_WIDTH - text1.get_width()) // 2, 50) )
+        overlay.blit(text2, ( (GAME_AREA_WIDTH - text2.get_width()) // 2, 120) )
+        
+        self.screen.blit(overlay, (0, (GAME_AREA_HEIGHT - 200) // 2))
+
+    def draw_error(self):
+        """Display an error message."""
+        overlay = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.SRCALPHA)
+        overlay.fill((100, 0, 0, 220)) # Semi-transparent red
+        
+        text1 = self.font_big.render("ERROR", True, COLOR_WHITE)
+        text2 = self.font_medium.render(self.error_message, True, COLOR_WHITE)
+        
+        overlay.blit(text1, ( (WINDOW_WIDTH - text1.get_width()) // 2, 100) )
+        overlay.blit(text2, ( (WINDOW_WIDTH - text2.get_width()) // 2, 200) )
+        
+        self.screen.blit(overlay, (0, 0))
+
+# ---------------------------------------------------------------
+# Entry Point
+# ---------------------------------------------------------------
+
+if __name__ == "__main__":
+    # --- Instructions ---
+    print("--- PC Tetris Client ---")
+    print("Ensure your Pico is running 'pico_tetris_main.py'")
+    print("If using USB, check SERIAL_PORT variable is correct (e.g., COM3)")
+    print("If using WiFi, check PICO_IP variable is correct (e.g., 192.168.1.100)")
+    print("-" * 26)
+
+    client = PygameClient()
+    client.run_game()
+    
+pico code:
+
+# pico_tetris_main.py
+# MicroPython code for Raspberry Pi Pico W
+# Runs the Tetris game logic and acts as a server for the PC client.
+
+import machine
+import time
+import sys
+import select
+import random
+import network
+import socket
+import ujson
+
+# ---------------------------------------------------------------
+# Configuration
+# ---------------------------------------------------------------
+
+# --- WiFi Config ---
+# Set your WiFi credentials
+WIFI_SSID = "YOUR_WIFI_SSID"
+WIFI_PASSWORD = "YOUR_WIFI_PASSWORD"
+# Leave IP blank to use DHCP, or set a static IP
+WIFI_STATIC_IP = ""  # Example: "192.168.1.100"
+SERVER_PORT = 8080
+
+# --- Display Config ---
+# 16x32 display (e.g., 4x 8x8 modules in a 2x2 grid)
+# We assume 16 is width (x) and 32 is height (y)
+DISPLAY_WIDTH = 16
+DISPLAY_HEIGHT = 32
+
+# --- SPI Config for MAX7219 ---
+# Connect DIN -> GP11 (MOSI)
+# Connect CS  -> GP10 (CSn)
+# Connect CLK -> GP12 (SCK)
+# NOTE: You may need to adjust these pins
+SPI_BUS = 0
+SPI_SCK_PIN = machine.Pin(10)
+SPI_MOSI_PIN = machine.Pin(11)
+SPI_CS_PIN = machine.Pin(9) # Use GP9 for CS
+
+# Number of 8x8 matrices cascaded
+NUM_MATRICES = 8  # For 16x32, you have (16/8) * (32/8) = 2 * 4 = 8 modules
+
+# --- Game Config ---
+GAME_TICK_RATE = 0.5  # Seconds per game tick (gravity)
+PLAYER_1_COLOR = 1  # 1 represents Player 1's piece
+PLAYER_2_COLOR = 2  # 2 represents Player 2's piece
+STATIC_COLOR = 3  # Represents a placed piece
+
+# Tetromino shapes (O, I, S, Z, L, J, T)
+# Each shape is a list of (x, y) coordinates relative to a pivot
+TETROMINOES = {
+    'O': [(0, 0), (1, 0), (0, 1), (1, 1)],
+    'I': [(0, 1), (1, 1), (2, 1), (3, 1)],
+    'S': [(1, 0), (2, 0), (0, 1), (1, 1)],
+    'Z': [(0, 0), (1, 0), (1, 1), (2, 1)],
+    'L': [(0, 1), (1, 1), (2, 1), (2, 0)],
+    'J': [(0, 1), (1, 1), (2, 1), (0, 0)],
+    'T': [(1, 1), (0, 1), (2, 1), (1, 0)]
+}
+TETROMINO_KEYS = list(TETROMINOES.keys())
+
+# ---------------------------------------------------------------
+# Minimal MAX7219 Driver
+# ---------------------------------------------------------------
+
+class MAX7219Display:
+    def __init__(self, spi, cs_pin, num_matrices):
+        self.spi = spi
+        self.cs = cs_pin
+        self.cs.init(cs_pin.OUT, value=1)
+        self.num_matrices = num_matrices
+        self.buffer = bytearray(8 * num_matrices)
+        
+        # Register addresses
+        self._NOOP = 0x0
+        self._DECODE_MODE = 0x9
+        self._INTENSITY = 0xA
+        self._SCAN_LIMIT = 0xB
+        self._SHUTDOWN = 0xC
+        self._DISPLAY_TEST = 0xF
+        
+        self.init_display()
+
+    def _write_cmd(self, register, data):
+        """Write to a register on all cascaded matrices."""
+        self.cs(0)
+        for _ in range(self.num_matrices):
+            self.spi.write(bytearray([register, data]))
+        self.cs(1)
+
+    def init_display(self):
+        """Initialize the MAX7219 registers."""
+        self._write_cmd(self._SHUTDOWN, 0x01)       # Turn on display
+        self._write_cmd(self._DISPLAY_TEST, 0x00)   # Disable test mode
+        self._write_cmd(self._SCAN_LIMIT, 0x07)     # Scan all 8 digits
+        self._write_cmd(self._DECODE_MODE, 0x00)    # No BCD decode
+        self._write_cmd(self._INTENSITY, 0x07)      # Medium intensity
+        self.clear()
+        self.show()
+
+    def set_pixel(self, x, y, value):
+        """Set a pixel in the display buffer."""
+        # This logic heavily depends on how your 16x32 matrix is wired.
+        # This example assumes a 2x4 layout (2 wide, 4 high) of 8x8 modules.
+        # x=0..15, y=0..31
+        
+        if not (0 <= x < DISPLAY_WIDTH and 0 <= y < DISPLAY_HEIGHT):
+            return
+
+        # Determine which matrix the pixel belongs to
+        matrix_x = x // 8  # 0 or 1
+        matrix_y = y // 8  # 0, 1, 2, or 3
+        
+        # Calculate matrix index (assuming row-major order of matrices)
+        # (0,0) (1,0)
+        # (0,1) (1,1)
+        # (0,2) (1,2)
+        # (0,3) (1,3)
+        matrix_index = matrix_y * 2 + matrix_x
+        
+        # Calculate pixel's position *within* that matrix
+        local_x = x % 8
+        local_y = y % 8
+        
+        # Calculate the byte offset in the buffer
+        # Each matrix has 8 bytes (for 8 rows)
+        byte_offset = matrix_index * 8 + local_y
+        
+        # Set or clear the bit
+        bit_mask = 1 << (7 - local_x) # 8x8 matrices are often mapped this way
+        
+        if value:
+            self.buffer[byte_offset] |= bit_mask
+        else:
+            self.buffer[byte_offset] &= ~bit_mask
+
+    def clear(self):
+        """Clear the internal buffer."""
+        for i in range(len(self.buffer)):
+            self.buffer[i] = 0x00
+
+    def show(self):
+        """Send the buffer contents to the display."""
+        # Write all 8 rows for each matrix
+        for row in range(8):
+            self.cs(0)
+            # Iterate through matrices in reverse order for cascading
+            for matrix_index in reversed(range(self.num_matrices)):
+                byte_offset = matrix_index * 8 + row
+                self.spi.write(bytearray([row + 1, self.buffer[byte_offset]]))
+            self.cs(1)
+            
+    def display_text(self, text):
+        # Simplified text display (for menus)
+        # This is a placeholder. Real font rendering is complex.
+        self.clear()
+        if text == "USB":
+            self.set_pixel(1, 1, 1); self.set_pixel(2, 1, 1) # U
+            self.set_pixel(5, 1, 1); self.set_pixel(6, 1, 1) # S
+            self.set_pixel(9, 1, 1); self.set_pixel(10, 1, 1) # B
+        elif text == "WIFI":
+            self.set_pixel(1, 1, 1); self.set_pixel(2, 1, 1) # W
+            self.set_pixel(5, 1, 1); self.set_pixel(6, 1, 1) # I
+            self.set_pixel(9, 1, 1); self.set_pixel(10, 1, 1) # F
+            self.set_pixel(13, 1, 1); self.set_pixel(14, 1, 1) # I
+        self.show()
+
+# ---------------------------------------------------------------
+# Game Logic
+# ---------------------------------------------------------------
+
+class TetrisGame:
+    def __init__(self):
+        self.width = DISPLAY_WIDTH
+        self.height = DISPLAY_HEIGHT
+        self.grid = [[0 for _ in range(self.width)] for _ in range(self.height)]
+        self.score = 0
+        self.game_over = False
+        
+        self.p1 = self.Player(self, PLAYER_1_COLOR, self.width // 2 - 4)
+        self.p2 = self.Player(self, PLAYER_2_COLOR, self.width // 2 + 1)
+        
+        self.p1.next_shape = self.get_random_shape()
+        self.p2.next_shape = self.get_random_shape()
+        
+        self.spawn_new_pieces()
+
+    def get_random_shape(self):
+        return random.choice(TETROMINO_KEYS)
+
+    def spawn_new_pieces(self):
+        self.p1.spawn(self.p1.next_shape)
+        self.p2.spawn(self.p2.next_shape)
+        
+        self.p1.next_shape = self.get_random_shape()
+        self.p2.next_shape = self.get_random_shape()
+        
+        # Check for immediate game over
+        if not self.p1.is_valid_position() or not self.p2.is_valid_position():
+            self.game_over = True
+
+    class Player:
+        def __init__(self, game, color, start_x):
+            self.game = game
+            self.color = color
+            self.start_x = start_x
+            self.shape = None
+            self.shape_key = ''
+            self.x = 0
+            self.y = 0
+            self.next_shape = ''
+            self.is_placed = False
+
+        def spawn(self, shape_key):
+            self.shape_key = shape_key
+            self.shape = TETROMINOES[shape_key]
+            self.x = self.start_x
+            self.y = 0 # Spawn at top
+            self.is_placed = False
+
+        def is_valid_position(self, shape=None, x=None, y=None):
+            shape = shape if shape is not None else self.shape
+            x = x if x is not None else self.x
+            y = y if y is not None else self.y
+            
+            for (px, py) in shape:
+                nx, ny = x + px, y + py
+                # Check bounds
+                if not (0 <= nx < self.game.width and 0 <= ny < self.game.height):
+                    return False
+                # Check for collision with static pieces
+                if self.game.grid[ny][nx] == STATIC_COLOR:
+                    return False
+                # Check for collision with *other* player's active piece
+                other_player = self.game.p2 if self.color == PLAYER_1_COLOR else self.game.p1
+                if not other_player.is_placed:
+                    for (opx, opy) in other_player.shape:
+                        if (other_player.x + opx == nx and other_player.y + opy == ny):
+                            return False
+            return True
+
+        def move(self, dx, dy):
+            if self.is_placed:
+                return False
+            if self.is_valid_position(x=self.x + dx, y=self.y + dy):
+                self.x += dx
+                self.y += dy
+                return True
+            return False
+
+        def rotate(self):
+            if self.is_placed or self.shape_key == 'O':
+                return
+            
+            # Simple rotation logic: (x, y) -> (-y, x) around pivot (0,0)
+            # Since our pivot isn't (0,0), we find the "center" (approx)
+            # This is complex. Using a simpler pivot (second block) for non-I
+            pivot = self.shape[1] 
+            
+            new_shape = []
+            if self.shape_key == 'I':
+                # 'I' block rotation is special
+                pivot = (1, 1) # Use a conceptual pivot
+                for (px, py) in self.shape:
+                    new_shape.append((-(py - pivot[1]) + pivot[0], (px - pivot[0]) + pivot[1]))
+            else:
+                 for (px, py) in self.shape:
+                    new_shape.append((-(py - pivot[1]) + pivot[0], (px - pivot[0]) + pivot[1]))
+            
+            # "Wall kick" - try to move if rotation fails
+            if self.is_valid_position(shape=new_shape):
+                self.shape = new_shape
+            elif self.is_valid_position(shape=new_shape, x=self.x + 1):
+                self.shape = new_shape
+                self.x += 1
+            elif self.is_valid_position(shape=new_shape, x=self.x - 1):
+                self.shape = new_shape
+                self.x -= 1
+            elif self.is_valid_position(shape=new_shape, x=self.x + 2):
+                self.shape = new_shape
+                self.x += 2
+            elif self.is_valid_position(shape=new_shape, x=self.x - 2):
+                self.shape = new_shape
+                self.x -= 2
+
+
+    def step_gravity(self):
+        """Apply gravity to both players."""
+        if self.game_over:
+            return
+
+        p1_can_move = True
+        p2_can_move = True
+
+        if not self.p1.is_placed:
+            if not self.p1.move(0, 1):
+                p1_can_move = False
+                
+        if not self.p2.is_placed:
+            if not self.p2.move(0, 1):
+                p2_can_move = False
+
+        if not p1_can_move and not self.p1.is_placed:
+            self.place_piece(self.p1)
+            
+        if not p2_can_move and not self.p2.is_placed:
+            self.place_piece(self.p2)
+            
+        # Check if both players have placed their pieces
+        if self.p1.is_placed and self.p2.is_placed:
+            cleared_lines = self.check_for_lines()
+            if cleared_lines == 0:
+                self.spawn_new_pieces()
+            # If lines were cleared, the flicker effect will happen
+            # and spawning will be delayed.
+            
+    def place_piece(self, player):
+        """Lock a player's piece into the grid."""
+        if player.is_placed:
+            return
+        player.is_placed = True
+        for (px, py) in player.shape:
+            nx, ny = player.x + px, player.y + py
+            if 0 <= ny < self.height and 0 <= nx < self.width:
+                self.grid[ny][nx] = STATIC_COLOR
+
+    def check_for_lines(self):
+        """Check for and clear completed lines."""
+        lines_to_clear = []
+        for y in range(self.height):
+            if all(self.grid[y][x] == STATIC_COLOR for x in range(self.width)):
+                lines_to_clear.append(y)
+        
+        if lines_to_clear:
+            self.score += len(lines_to_clear) ** 2 # Bonus for multi-lines
+            
+            # Return lines for flicker effect.
+            # The game loop will handle clearing and shifting.
+            return lines_to_clear
+            
+        return 0
+        
+    def finish_line_clear(self, cleared_lines):
+        """Called after flicker, to remove lines and shift grid down."""
+        for y_to_clear in cleared_lines:
+            # Remove the cleared line
+            del self.grid[y_to_clear]
+            # Add a new empty line at the top
+            self.grid.insert(0, [0 for _ in range(self.width)])
+            
+        # After clearing, spawn new pieces
+        self.spawn_new_pieces()
+
+
+    def handle_input(self, player_num, action):
+        if self.game_over:
+            return
+            
+        player = self.p1 if player_num == 1 else self.p2
+        
+        if player.is_placed: # Don't accept input if piece is placed
+            return
+            
+        if action == 'left':
+            player.move(-1, 0)
+        elif action == 'right':
+            player.move(1, 0)
+        elif action == 'down':
+            # Move down until it can't, then place
+            while player.move(0, 1):
+                pass
+            self.place_piece(player)
+        elif action == 'rotate':
+            player.rotate()
+            
+    def get_game_state(self):
+        """Generate the full game state for the client."""
+        # Create a temporary grid with active pieces drawn on it
+        temp_grid = [row[:] for row in self.grid]
+        
+        # Draw P1
+        if not self.p1.is_placed:
+            for (px, py) in self.p1.shape:
+                nx, ny = self.p1.x + px, self.p1.y + py
+                if 0 <= ny < self.height and 0 <= nx < self.width:
+                    temp_grid[ny][nx] = self.p1.color
+
+        # Draw P2
+        if not self.p2.is_placed:
+            for (px, py) in self.p2.shape:
+                nx, ny = self.p2.x + px, self.p2.y + py
+                if 0 <= ny < self.height and 0 <= nx < self.width:
+                    temp_grid[ny][nx] = self.p2.color
+        
+        # Flatten grid to a simple list or string for transmission
+        flat_grid = [cell for row in temp_grid for cell in row]
+        
+        state = {
+            "grid": flat_grid,
+            "score": self.score,
+            "p1_next": self.p1.next_shape,
+            "p2_next": self.p2.next_shape,
+            "game_over": self.game_over
+        }
+        return ujson.dumps(state)
+        
+    def print_to_repl(self):
+        """Print a simple text version of the game to the REPL."""
+        temp_grid = [row[:] for row in self.grid]
+        
+        if not self.p1.is_placed:
+            for (px, py) in self.p1.shape:
+                if 0 <= self.p1.y + py < self.height:
+                    temp_grid[self.p1.y + py][self.p1.x + px] = self.p1.color
+
+        if not self.p2.is_placed:
+            for (px, py) in self.p2.shape:
+                if 0 <= self.p2.y + py < self.height:
+                    temp_grid[self.p2.y + py][self.p2.x + px] = self.p2.color
+        
+        print("\n--- Pico Tetris --- Score: {} ---".format(self.score))
+        char_map = {0: ".", 1: "1", 2: "2", 3: "#"}
+        for y in range(self.height):
+            if y % 2 == 0: # Print every other line to save REPL space
+                print("".join(char_map.get(cell, "?") for cell in temp_grid[y]))
+        if self.game_over:
+            print("--- GAME OVER ---")
+
+# ---------------------------------------------------------------
+# Display Drawing Function
+# ---------------------------------------------------------------
+
+def draw_game_to_display(display, game_state_json):
+    """Draws the game state onto the MAX7219 display."""
+    try:
+        state = ujson.loads(game_state_json)
+        grid_flat = state["grid"]
+        
+        display.clear()
+        
+        for i in range(len(grid_flat)):
+            x = i % DISPLAY_WIDTH
+            y = i // DISPLAY_WIDTH
+            
+            # Draw any piece (active or static)
+            if grid_flat[i] != 0:
+                display.set_pixel(x, y, 1)
+                
+        display.show()
+    except Exception as e:
+        print("Error drawing to display:", e)
+
+def display_line_flicker(display, game, lines_to_clear):
+    """Flicker the cleared lines."""
+    for _ in range(3): # Flicker 3 times
+        # Turn lines off
+        for y in lines_to_clear:
+            for x in range(DISPLAY_WIDTH):
+                display.set_pixel(x, y, 0)
+        display.show()
+        time.sleep(0.1)
+        
+        # Turn lines on
+        for y in lines_to_clear:
+            for x in range(DISPLAY_WIDTH):
+                display.set_pixel(x, y, 1)
+        display.show()
+        time.sleep(0.1)
+
+# ---------------------------------------------------------------
+# Communication Handlers
+# ---------------------------------------------------------------
+
+# --- USB (STDIO) ---
+# We'll use a simple poll on sys.stdin
+usb_poller = select.poll()
+usb_poller.register(sys.stdin, select.POLLIN)
+
+def check_usb_input():
+    """Check for non-blocking input from USB."""
+    if usb_poller.poll(0):
+        try:
+            char = sys.stdin.read(1)
+            if char:
+                return char
+        except Exception as e:
+            print("USB read error:", e)
+    return None
+
+def send_usb_message(message):
+    """Send a message over USB (just print it)."""
+    print(message)
+
+# --- WiFi (Socket) ---
+def setup_wifi():
+    """Connects to WiFi and returns the server socket."""
+    wlan = network.WLAN(network.STA_IF)
+    wlan.active(True)
+    wlan.connect(WIFI_SSID, WIFI_PASSWORD)
+    
+    if WIFI_STATIC_IP:
+        wlan.ifconfig((WIFI_STATIC_IP, '255.255.255.0', '192.168.1.1', '8.8.8.8'))
+
+    print("Connecting to WiFi '{}'...".format(WIFI_SSID))
+    max_wait = 10
+    while max_wait > 0:
+        if wlan.status() < 0 or wlan.status() >= 3:
+            break
+        max_wait -= 1
+        time.sleep(1)
+        
+    if wlan.status() != 3:
+        raise RuntimeError('WiFi connection failed')
+    else:
+        status = wlan.ifconfig()
+        ip = status[0]
+        print("Connected! Pico IP: {}".format(ip))
+        
+        # Set up server socket
+        addr = socket.getaddrinfo('0.0.0.0', SERVER_PORT)[0][-1]
+        s = socket.socket()
+        s.bind(addr)
+        s.listen(1) # Listen for one connection
+        s.setblocking(False) # Non-blocking socket
+        
+        print("Listening on tcp://{}:{}".format(ip, SERVER_PORT))
+        return s
+        
+def check_wifi_connection(server_socket):
+    """Check for a new client connection."""
+    try:
+        conn, addr = server_socket.accept()
+        conn.setblocking(False)
+        print("Client connected from:", addr)
+        return conn
+    except OSError as e:
+        # No connection pending
+        return None
+
+def check_wifi_input(client_socket):
+    """Check for non-blocking input from WiFi client."""
+    if client_socket:
+        try:
+            data = client_socket.recv(64) # Read up to 64 bytes
+            if data:
+                return data.decode('utf-8')
+            else:
+                # Client disconnected
+                return "DISCONNECTED"
+        except OSError as e:
+            # No data available
+            return None
+    return None
+
+def send_wifi_message(client_socket, message):
+    """Send a message to the WiFi client."""
+    if client_socket:
+        try:
+            client_socket.sendall(message.encode('utf-8') + b'\n')
+        except Exception as e:
+            print("WiFi send error:", e)
+            return False # Signal disconnect
+    return True
+
+# ---------------------------------------------------------------
+# Input Mapping
+# ---------------------------------------------------------------
+
+# Map single-character inputs to game actions
+# PC client will send these
+INPUT_MAP = {
+    # Player 1 (WASD + Q/E)
+    'w': (1, 'rotate'),
+    'a': (1, 'left'),
+    's': (1, 'down'),
+    'd': (1, 'right'),
+    # 'q': (1, 'rotate'), # Use 'w' for simplicity
+    
+    # Player 2 (Arrows + O/P)
+    'u': (2, 'rotate'), # 'u' for up-arrow
+    'l': (2, 'left'),   # 'l' for left-arrow
+    'n': (2, 'down'),   # 'n' for down-arrow
+    'r': (2, 'right'),  # 'r' for right-arrow
+    # 'o': (2, 'rotate'), # Use 'u' for simplicity
+}
+
+# ---------------------------------------------------------------
+# Main Menu
+# ---------------------------------------------------------------
+
+def main_menu(display):
+    """Shows the main menu and waits for selection."""
+    print("\n" * 5)
+    print("--- PICO TETRIS ---")
+    print("Select Connection Mode:")
+    print("1: USB (Press 'w' or 'u')")
+    print("2: WiFi (Press 's' or 'n')")
+    
+    display.display_text("WIFI") # Default to showing WIFI
+    showing = "WIFI"
+    
+    while True:
+        char = check_usb_input() # Menu selection is always via USB
+        if char:
+            if char in ('w', 'u'): # Select USB
+                print("USB Mode Selected.")
+                display.display_text("USB")
+                time.sleep(1)
+                return "USB"
+            if char in ('s', 'n'): # Select WiFi
+                print("WiFi Mode Selected.")
+                display.display_text("WIFI")
+                time.sleep(1)
+                return "WIFI"
+                
+        # Toggle display text for visual feedback
+        if showing == "WIFI":
+            display.display_text("USB")
+            showing = "USB"
+        else:
+            display.display_text("WIFI")
+            showing = "WIFI"
+            
+        time.sleep(0.5)
+
+# ---------------------------------------------------------------
+# Main Game Loop
+# ---------------------------------------------------------------
+
+def game_loop(mode, display, comms):
+    """The main game loop."""
+    
+    game = TetrisGame()
+    
+    last_tick_time = time.ticks_ms()
+    flicker_info = None # Stores (start_time, lines_to_clear)
+    
+    # Comms setup
+    server_socket = None
+    client_socket = None
+    if mode == "WIFI":
+        try:
+            server_socket = setup_wifi()
+            display.display_text("WIFI")
+        except Exception as e:
+            print("Failed to start WiFi:", e)
+            return
+    else:
+        display.display_text("USB")
+
+    print("Game Started. Go!")
+
+    while True:
+        
+        # --- 1. Handle Flicker Effect ---
+        if flicker_info:
+            start_time, lines_to_clear = flicker_info
+            if time.ticks_diff(time.ticks_ms(), start_time) > 700: # 0.7s flicker
+                # Flicker finished, now clear lines and spawn
+                game.finish_line_clear(lines_to_clear)
+                flicker_info = None
+            # (Drawing logic will handle the actual flicker)
+        
+        # --- 2. Handle Gravity (Game Tick) ---
+        if not game.game_over and not flicker_info:
+            current_time = time.ticks_ms()
+            if time.ticks_diff(current_time, last_tick_time) > (GAME_TICK_RATE * 1000):
+                last_tick_time = current_time
+                game.step_gravity()
+                
+                # Check if step resulted in line clear
+                lines_to_clear = game.check_for_lines()
+                if lines_to_clear:
+                    # Start flicker effect
+                    flicker_info = (time.ticks_ms(), lines_to_clear)
+                    # Play flicker on display
+                    display_line_flicker(display, game, lines_to_clear)
+
+
+        # --- 3. Handle Inputs ---
+        raw_input_data = None
+        if mode == "USB":
+            raw_input_data = check_usb_input()
+        
+        elif mode == "WIFI":
+            if not client_socket:
+                client_socket = check_wifi_connection(server_socket)
+            else:
+                raw_input_data = check_wifi_input(client_socket)
+                if raw_input_data == "DISCONNECTED":
+                    print("Client disconnected.")
+                    client_socket.close()
+                    client_socket = None
+                    raw_input_data = None
+
+        if raw_input_data:
+            # Process all chars in buffer
+            for char in raw_input_data:
+                if char in INPUT_MAP:
+                    player_num, action = INPUT_MAP[char]
+                    game.handle_input(player_num, action)
+
+        # --- 4. Send State to Client ---
+        game_state_json = game.get_game_state()
+        
+        if mode == "USB":
+            send_usb_message(game_state_json)
+        
+        elif mode == "WIFI" and client_socket:
+            if not send_wifi_message(client_socket, game_state_json):
+                # Send failed, client likely disconnected
+                client_socket.close()
+                client_socket = None
+
+        # --- 5. Draw to Pico Display ---
+        # (Flicker logic handles its own drawing)
+        if not flicker_info:
+            draw_game_to_display(display, game_state_json)
+
+        # --- 6. Print to REPL ---
+        # (Limit this to reduce lag)
+        if time.ticks_diff(time.ticks_ms(), last_tick_time) % 1000 < 20: # ~Once per sec
+            game.print_to_repl()
+            
+        # --- 7. Game Over ---
+        if game.game_over:
+            # Simple stop. PC client will show game over screen.
+            print("Game Over! Final Score: {}".format(game.score))
+            # You could restart the game or return to menu here
+            time.sleep(5)
+            game = TetrisGame() # Restart game
+            flicker_info = None
+
+        # Small delay to prevent 100% CPU
+        time.sleep_ms(10)
+
+
+# ---------------------------------------------------------------
+# Entry Point
+# ---------------------------------------------------------------
+
+def main():
+    # Init SPI and Display
+    try:
+        spi = machine.SPI(SPI_BUS, 
+                          sck=SPI_SCK_PIN, 
+                          mosi=SPI_MOSI_PIN)
+        cs = SPI_CS_PIN
+        display = MAX7219Display(spi, cs, NUM_MATRICES)
+        display.init_display()
+        print("MAX7219 Display Initialized.")
+    except Exception as e:
+        print("Error initializing display:", e)
+        print("Continuing without display (REPL only)...")
+        # Create a dummy display object
+        class DummyDisplay:
+            def __getattr__(self, name):
+                return lambda *args, **kwargs: None
+        display = DummyDisplay()
+
+    # Start Menu
+    mode = main_menu(display)
+    
+    # Start Game Loop
+    game_loop(mode, display, {})
+
+if __name__ == "__main__":
+    main()
+    
+    
+I would like to select pico's communication mode also from the pc. And there should be a pause menu to return to menu or restart the game. No need to print to terminal game states, the client gui is enough

@@ -19,7 +19,7 @@ class GameSystem:
                  cs_pin=5, clk_pin=2, din_pin=3):
         self.cs = Pin(cs_pin, Pin.OUT)
         self.spi = SPI(0, baudrate=10_000_000, sck=Pin(clk_pin), mosi=Pin(din_pin))
-        self.display = Matrix8x8(self.spi, self.cs, num_displays, orientation=2)
+        self.display = Matrix8x8(self.spi, self.cs, num_displays, orientation=1)
         self.num_displays = num_displays
         self.display_width = 8 * num_displays
         self.display_height = 8
@@ -37,8 +37,27 @@ class GameSystem:
         self.display.fill(0)
 
     def draw_pixel(self, x, y, val=1):
-        if 0 <= x < self.display_width and 0 <= y < self.display_height:
-            self.display.pixel(x, y, val)
+        # Check if the game's coordinates are valid
+        if not (0 <= x < self.display_width and 0 <= y < self.display_height):
+            return
+
+        # --- Coordinate Translation for 90-degree Rotated Modules ---
+        # This translates the game's (x, y) to the library's (x_new, y_new)
+        # to account for the physical ^ ^ ^ ^ layout.
+
+        module_index = x // 8      # Which module (0, 1, 2, or 3)
+        x_on_module = x % 8        # The "column" on that module (0-7)
+
+        # Apply 90-degree CW rotation: (x, y) -> (7 - y, x)
+        x_new_on_module = 7 - y
+        y_new_on_module = x_on_module
+
+        # Re-calculate the final (x, y) for the library
+        x_new = (module_index * 8) + x_new_on_module
+        y_new = y_new_on_module
+        # --- End of Translation ---
+
+        self.display.pixel(x_new, y_new, val)
 
     def show(self):
         self.display.show()
