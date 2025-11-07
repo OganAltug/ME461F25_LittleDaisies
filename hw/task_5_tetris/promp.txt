@@ -1,0 +1,29 @@
+Your assignment is to build a 2 player tetris game with micropython designed to run on a raspberry pi pico w and a pc.
+Pc client should also be written in python.
+
+Game will run on pico and game control inputs will be given from a pc via both over usb and wifi.
+User will be able to select their communication preference when the program starts.
+
+Game will be displayed on 16x32 dot matrix display consisting of max7219 displays. 16 pixel side should be the bottom.
+All game states also will be published to the pc and game will be displayed on a virtual 16x32 dot matrix screen on the pc.
+
+Game will be played by two players, each will player will be given their on pieces and they will only control their piece.
+Player will colloborate and play in same arena. They need to work together to place pieces, delete lines and gain points.
+Players should be given the pieces at the same time, first player to place their piece should wait for the other to get their new piece.
+Game input will be given from pc as wasd and arrows key for direction control for players 1 and 2 respectively.
+There also will be inputs to rotate their piece.
+
+When a line clears, cleared lines should flicker momentarily.
+For the real 16x32 display game screen should be very minimal, only pieces should be displayed.
+However, for the pc client total points, next piece screens can be added next to the 16x32 screen.
+
+Navigation through game menus should be done with game control inputs and menu should be displayed both on pi pico terminal and dot matrix.
+Also very simple represantaion of the game should be printed to pico terminal if possible while playing.
+
+I would like to build this project step by step.
+1) Write the pi pico code without the pc communication part. I will test this code on WokWi. So you should also replace pc inputs with buttons.
+3) After wokwi test you should modify latest state of code to take inputs from my pc over usb.
+4) Write the whole pc client but exclude the wifi communication part for now.
+5) Add wifi functionality to latest code.
+
+now do only the first step
