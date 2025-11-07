@@ -1,0 +1,32 @@
+1 - Presentation about "Sampling Theorem has been made"
+
+2 - On an integrated circuit north of the circuit is marked with a dot or a block. 
+It says that left north is 1 and start counting
+
+3 - When a component connected to 5V and connected pin is HIGH, nothing happens. 
+But, if it is LOW then it is sinks the current.
+
+4 - When a component connected to 0V and connected pin is LOW, nothing happens. 
+But, if it is HIGH then it is sinks the current.
+
+5 - When we wanted to make the circuit conservative, we will use the smallest 
+mA of source or sink.
+
+6 - When you press the button and it acts multiple times, it maybe because of the 
+debouncing. Basic solution is might be waiting 20 ms.
+
+7 - Watchdog timer, use it, learn it
+
+8 - EEPROM --> bak buna
+
+9 - In logic SET means 1, RESET means 0.
+
+10 - xor, or , and learn them.
+
+11 - Communicate with the pico via wifi. Play your game from your pc and run from 
+pico.
+
+12 - 16x32 dot matrix for a screen. The catch is that the game is going to be for 2
+players, and 2 player will be collaborating. WASD and arrow keys will be buttons. 
+Even buttons not pressed, pico will send the current state and computer screen will
+show the current state.
