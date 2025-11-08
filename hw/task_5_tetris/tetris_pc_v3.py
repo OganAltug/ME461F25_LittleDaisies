@@ -22,7 +22,7 @@ SERIAL_BAUDRATE = 115200
 
 # --- WiFi Config ---
 # This MUST match the IP your Pico gets from DHCP or its static IP
-PICO_IP = "192.168.1.100"  # CHANGE THIS
+PICO_IP = ""  # CHANGE THIS
 PICO_PORT = 8080
 
 # --- Pygame Config ---
