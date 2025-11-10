@@ -1,0 +1,11 @@
+1 - Use just one page of code that first try serial and then if it is connected
+use serial, if not try connect wi-fi. If wi-fi connection is still not suitable,
+take input for the wi-fi credential.
+
+2 - Try to have the best game, try to have the best solutions, try to fix bugs.
+
+3 - Look for the programming the pico from the wi-fi
+
+4 - Whether send the whole frame, if you send only the differences, it would be less.
+
+5 - 
