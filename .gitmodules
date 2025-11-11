@@ -1,0 +1,9 @@
+[submodule "components_usage/ssd1306/MicroPython-SSD1306"]
+	path = components_usage/ssd1306/MicroPython-SSD1306
+	url = git@github.com:TimHanewich/MicroPython-SSD1306.git
+[submodule "components_usage/ssd1306/image_processor/MicroPython-SSD1306"]
+	path = components_usage/ssd1306/image_processor/MicroPython-SSD1306
+	url = git@github.com:TimHanewich/MicroPython-SSD1306.git
+[submodule "components_usage/mg90s-servo/micropython_servo_pdm"]
+	path = components_usage/mg90s-servo/micropython_servo_pdm
+	url = git@github.com:TTitanUA/micropython_servo_pdm.git
