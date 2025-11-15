@@ -1,0 +1,45 @@
+Hello,
+
+Our task is to connect multiple picos together and synchronously display a bouncing ball like the DVD screen saver
+on the displays connected to each pico.
+
+Each pico has two max7219 screen connected in vertical configuration (16 row, 8 columns) 
+and all screens should be considered as huge single screen.
+For example if we have three screens our huge single screen will be 16 row 24 columns.
+
+The main idea behind bouncing ball is this:
+- The "huge single screen" edges are considered as walls.
+- Ball bounces from top and bottom walls.
+- Ball travels through to other side when it reaches the side edges.
+So for the example given previously, ball would bounce from rows 0 and 15 
+(row and columns index starts at 0) and when it reaches column 23 it goes
+back to column 0.
+
+Pico's will connect to an external wifi and communicate through sockets.
+We will use mosquitto and publisher and subscriber framework for this.
+
+All pico's will have hardcoded static names.
+When connected to the network all pico's will publish their names continuosly.
+This continous name messages will be used to check respective pico health by 
+the main pico.
+
+Pico's name will be simple integer numbers, from 0, 1, ..., n-1.
+Among the connected pico's we will pick the main pico as the pico
+with the lowest integer value.
+
+Main picos duty is the handle bouncing ball pyhsics loop and to publish the
+states to a topic named "BallPos". Ball pos topic messages contain these information,
+- total screen size (for the example before: [16,24])
+- ball position on the screen: [x,y]
+- ball velocity: [x, y]
+- which pico is responsible for which segment of the whole screen
+for example if we have 3 pico with id's 2,5,6 corresponding order would be [2,5,6]
+
+Main pico will also check if pico's are publishing their ID every loop. If a pico stops
+publishing its id we assume its disconnected and rearrange screen order and count.
+Also main pico should look for previously not connected picos every step and if a new pico
+connects it should again rearrange screen order and count.
+
+Other pico's should also continuosly check which picos are still connected, and check
+for newly connected picos. If the main pico disconnects, pico with the lowest id is again
+selected as the main pico.
