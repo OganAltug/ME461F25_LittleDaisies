@@ -1,6 +1,6 @@
 # MECH461 MECHATRONIC COMPONENTS AND INSTRUMENTATION 
 
-This repository contains all coursework, lab work, and related materials for **ME461: Microcontroller Applications**.  
+This repository contains all coursework, lab work, and related materials for **ME461: Mechatronic Components and Instrumentation**.  
 It is collaboratively maintained by:
 
 - **Abdullah Naci Bodur**  
