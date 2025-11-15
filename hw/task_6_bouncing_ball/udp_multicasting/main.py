@@ -77,21 +77,21 @@ def setup_sockets(my_ip):
     print("Creating sending socket...")
     send_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     
-    # --- FIX: Manually create the mreq struct ---
-    # This replaces the missing socket.inet_aton()
+    # --- THIS IS THE FIX ---
+    # Enable Multicast Loopback (IPPROTO_IP=0, IP_MULTICAST_LOOP=11, value=1)
+    # This allows the Pico to receive its own sent packets, which is
+    # crucial for the leader election to start.
+    send_sock.setsockopt(socket.IPPROTO_IP, 11, 1)
+    # --- END OF FIX ---
     
-    # Convert multicast IP string to 4 bytes
+    # --- Manually create the mreq struct ---
     mcast_parts = [int(x) for x in MULTICAST_GROUP.split('.')]
     mcast_bytes = struct.pack("!4B", *mcast_parts)
     
-    # Convert our local IP string to 4 bytes
     if_parts = [int(x) for x in my_ip.split('.')]
     if_bytes = struct.pack("!4B", *if_parts)
-    
-    # The mreq (membership request) struct is the multicast address
-    # followed by the local interface address.
+
     mreq = mcast_bytes + if_bytes
-    # --- End of Fix ---
 
     # 2. Create and configure the HEARTBEAT listening socket
     print(f"Binding to heartbeat group ({MULTICAST_GROUP}:{HEARTBEAT_PORT})")
@@ -99,7 +99,6 @@ def setup_sockets(my_ip):
     heartbeat_listen_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     heartbeat_listen_sock.bind(("", HEARTBEAT_PORT))
     
-    # Join the multicast group using our manually created mreq
     heartbeat_listen_sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
     heartbeat_listen_sock.setblocking(False) # NON-BLOCKING
 
@@ -109,7 +108,6 @@ def setup_sockets(my_ip):
     ball_pos_listen_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     ball_pos_listen_sock.bind(("", BALL_POS_PORT))
 
-    # Join the multicast group using our manually created mreq
     ball_pos_listen_sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
     ball_pos_listen_sock.setblocking(False) # NON-BLOCKING
 
