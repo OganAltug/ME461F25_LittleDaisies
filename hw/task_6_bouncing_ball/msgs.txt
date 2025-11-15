@@ -12,6 +12,7 @@ Now assume we have n Picos, among i-th is selected as the publisher manually, an
 
 Hello,
 
+<<<<<<< HEAD
 As a group we thought hardcoding pico id's would be a better solution. 
 Since we will know Pico physical order in the world, for example we can ID them as "1, 2, 3, ..." from left to right
 and pick the pico with the lowest id as the main pico that calculates ball positions. 
@@ -24,5 +25,20 @@ However we dont know where the pico id'ed 4 is supposed to in our order 1,3,2. S
 
 In the contrary if we hardcode pico ID's into their local code, their ID's will stay the same even if they disconnect 
 and reconnect and we will always know their position in the world.
+=======
+As a group we thought hardcoding pico id's is a better solution. Since we will know Pico physical order in the world, 
+we can for example ID them as "1, 2, 3, ..." from left to right and pick the pico with the lowest id as the main pico 
+that calculates ball positions. If we dynamically id'ed picos wrt their connection order instead, we thought that could 
+cause a problem if a pico disconnects and reconnects during operation. Lets say we id'ed our picos and ordered them at the start 
+as 1, 3, 2. Pico with the id 3 is the middle one and it disconnects at some time and then reconnects. 
+Then our code would think this is the 4th pico has connected to the network and id that pico as 4. 
+However we dont know where the pico id'ed 4 is supposed to in our order 1,2,3. 
+So we have to order pico's again in the middle of the operation.
 
-I guess we still give them random static ID's and organize them with a button tho, but maybe keeping things as simple as possible could be better. 
+>>>>>>> 29ebfd490074a469d9f93b3c8e12885abd734d25
+
+In the contrary if we hardcode pico ID's into their local code, their ID's will stay the same 
+even if they disconnect and reconnect and we will always know their position in the world.
+
+I guess we still give them random static ID's and organize them with a button tho, 
+but maybe keeping things as simple as possible could be better. 
