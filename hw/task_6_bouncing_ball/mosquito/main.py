@@ -19,7 +19,7 @@ WIFI_SSID = "Eren"
 WIFI_PASS = "19981998"
 
 # CHANGE THIS → your laptop/PC/IP running mosquitto
-MQTT_SERVER = "10.42.0.239"
+MQTT_SERVER = "10.42.0.1"
 
 MQTT_CLIENT_ID = f"pico_display_{MY_ID}"
 
@@ -43,10 +43,9 @@ oled = ssd1306.SSD1306_I2C(128, 64, i2c)
 
 def oled_print(lines):
     oled.fill(0)
-    y = 0
-    for line in lines:
-        oled.text(line, 0, y)
-        y += 12
+    
+    oled.text(lines, 0, 12)
+        
     oled.show()
 
 def oled_draw_ball(global_x, global_y, order):
@@ -97,16 +96,16 @@ current_ball_state = {
 # ============================================================
 
 def connect_wifi():
-    print(f"Connecting to Wi-Fi {WIFI_SSID} ...")
+    oled_print(f"Connecting to Wi-Fi {WIFI_SSID} ...")
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
     wlan.connect(WIFI_SSID, WIFI_PASS)
 
     while not wlan.isconnected():
-        print("Waiting...")
+        oled_print("Waiting...")
         time.sleep(1)
 
-    print("WiFi connected:", wlan.ifconfig())
+    oled_print(f"WiFi connected:{wlan.ifconfig()}")
 
 def mqtt_callback(topic, msg):
     global current_ball_state
@@ -128,7 +127,7 @@ def connect_mqtt():
     mqtt_client.connect()
     mqtt_client.subscribe(TOPIC_HEARTBEAT)
     mqtt_client.subscribe(TOPIC_BALL_POS)
-    print("MQTT connected.")
+    oled_print("MQTT connected.")
 
 # ============================================================
 # 5. GAME PHYSICS (MAIN PICO)
