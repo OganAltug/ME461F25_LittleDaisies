@@ -3,6 +3,7 @@ import time
 import json
 import machine
 import socket
+import struct
 
 # --- 1. CORE CONFIGURATION ---
 # !!! CHANGE THIS ON EACH PICO !!!
@@ -11,8 +12,8 @@ MY_ID = 0  # Pico 0
 # MY_ID = 2  # Pico 2
 
 # -- Wi-Fi Config --
-WIFI_SSID = "YOUR_WIFI_SSID"
-WIFI_PASS = "YOUR_WIFI_PASSWORD"
+WIFI_SSID = "Eren"
+WIFI_PASS = "19981998"
 
 # -- UDP Multicast "Topics" --
 # We use one IP and two different ports
@@ -76,14 +77,29 @@ def setup_sockets(my_ip):
     print("Creating sending socket...")
     send_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     
+    # --- FIX: Manually create the mreq struct ---
+    # This replaces the missing socket.inet_aton()
+    
+    # Convert multicast IP string to 4 bytes
+    mcast_parts = [int(x) for x in MULTICAST_GROUP.split('.')]
+    mcast_bytes = struct.pack("!4B", *mcast_parts)
+    
+    # Convert our local IP string to 4 bytes
+    if_parts = [int(x) for x in my_ip.split('.')]
+    if_bytes = struct.pack("!4B", *if_parts)
+    
+    # The mreq (membership request) struct is the multicast address
+    # followed by the local interface address.
+    mreq = mcast_bytes + if_bytes
+    # --- End of Fix ---
+
     # 2. Create and configure the HEARTBEAT listening socket
     print(f"Binding to heartbeat group ({MULTICAST_GROUP}:{HEARTBEAT_PORT})")
     heartbeat_listen_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     heartbeat_listen_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     heartbeat_listen_sock.bind(("", HEARTBEAT_PORT))
     
-    # Join the multicast group
-    mreq = socket.inet_aton(MULTICAST_GROUP) + socket.inet_aton(my_ip)
+    # Join the multicast group using our manually created mreq
     heartbeat_listen_sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
     heartbeat_listen_sock.setblocking(False) # NON-BLOCKING
 
@@ -93,7 +109,7 @@ def setup_sockets(my_ip):
     ball_pos_listen_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     ball_pos_listen_sock.bind(("", BALL_POS_PORT))
 
-    # Join the multicast group
+    # Join the multicast group using our manually created mreq
     ball_pos_listen_sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
     ball_pos_listen_sock.setblocking(False) # NON-BLOCKING
 
