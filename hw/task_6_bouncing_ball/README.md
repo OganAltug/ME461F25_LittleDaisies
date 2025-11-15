@@ -9,6 +9,7 @@ Each folder represents a distinct communication method between two or more Picos
 
 # Folder Structure Overview
 
+```
 project-root/
 │
 ├── task_6_bouncing_ball/
@@ -16,19 +17,21 @@ project-root/
 │
 ├── mosquito/
 │   ├── micropython-umqtt.simple-1.3.4/   → MQTT library for MicroPython
-│   ├── main.py                            		    → combined experiments
-│   ├── publisher.py                      		    → basic MQTT publisher
-│   ├── subscriber.py                     	    → basic MQTT subscriber
-│   ├── publisher_subscriber_a.py            → Pico A two-way
-│   ├── publisher_subscriber_b.py            → Pico B two-way
+│   ├── main.py                           → combined experiments
+│   ├── publisher.py                      → basic MQTT publisher
+│   ├── subscriber.py                     → basic MQTT subscriber
+│   ├── publisher_subscriber_a.py         → Pico A two-way
+│   ├── publisher_subscriber_b.py         → Pico B two-way
 │   │
 │   └── udp_multicasting/
-│       └── main.py                       		    → (deprecated) multicast experiment
+│       └── main.py                       → (deprecated) multicast experiment
 │
 └── web_server/
-    ├── ap_server.py                                   → Pico as WiFi Access Point
-    ├── sta_client.py                                    → Pico as WiFi Station (HTTP)
+    ├── ap_server.py                      → Pico as WiFi Access Point
+    ├── sta_client.py                     → Pico as WiFi Station (HTTP)
     └── related assets
+
+```
 
 
 
@@ -132,27 +135,32 @@ Your project uses these exact pins:
 
 # Raspberry Pi Pico W Pinout Diagram (Simplified)
 
-    ┌────────────────────────────────┐
- 3V3    ───│●                                     					    ●│─── VBUS (5V)
- GP0   ───│●                                     					    ●│─── VSYS
- GP1   ───│●   RASPBERRY PI PICO W PINOUT        	    ●│─── GND
- GND  ───│●                                      					    ●│─── GP26 (ADC0)
- GP2   ───│●                                     					    ●│─── GP27 (ADC1)
- GP3   ───│●                                     					    ●│─── GP28 (ADC2)
- GP4   ───│●                                    					    ●│─── ADC REF
- GP5   ───│●                                     					    ●│─── 3V3_EN
- GND  ───│●                                     					    ●│─── RUN (reset)
- GP6   ───│●                                     					    ●│─── GP22
- GP7   ───│●                                     					    ●│─── GND
- GP8   ───│●                                     					    ●│─── GP21
- GP9   ───│●                                     					    ●│─── GP20
- GP10 ───│●  ← SDA (SSD1306)                    			    ●│─── GP19
- GP11 ───│●  ← SCL (SSD1306)                     			    ●│─── GP18
- GP12 ───│●                                     					    ●│─── GP17
- GP13 ───│●                                     					    ●│─── GP16
- GND  ───│●                                     					    ●│─── GND
- GP14 ───│●                                     					    ●│─── GP15
-         	  └────────────────────────────────┘
+    
+
+```bash
+         ┌───────────────────────────────────────┐
+ 3V3  ───│●                                     ●│─── VBUS (5V)
+ GP0  ───│●                                     ●│─── VSYS
+ GP1  ───│●   RASPBERRY PI PICO W PINOUT        ●│─── GND
+ GND  ───│●                                     ●│─── GP26 (ADC0)
+ GP2  ───│●                                     ●│─── GP27 (ADC1)
+ GP3  ───│●                                     ●│─── GP28 (ADC2)
+ GP4  ───│●                                     ●│─── ADC REF
+ GP5  ───│●                                     ●│─── 3V3_EN
+ GND  ───│●                                     ●│─── RUN (reset)
+ GP6  ───│●                                     ●│─── GP22
+ GP7  ───│●                                     ●│─── GND
+ GP8  ───│●                                     ●│─── GP21
+ GP9  ───│●                                     ●│─── GP20
+ GP10 ───│●  ← SDA (SSD1306)                    ●│─── GP19
+ GP11 ───│●  ← SCL (SSD1306)                    ●│─── GP18
+ GP12 ───│●                                     ●│─── GP17
+ GP13 ───│●                                     ●│─── GP16
+ GND  ───│●                                     ●│─── GND
+ GP14 ───│●                                     ●│─── GP15
+         └───────────────────────────────────────┘
+
+```
 
 
 # Running MQTT Communication
@@ -206,12 +214,3 @@ Each Pico should print the other's messages through MQTT.
 | `udp_multicasting/`     | Experimental multicast (unsupported)     |
 | `web_server/`           | AP/STA WiFi + HTTP communication         |
 | `task_6_bouncing_ball/` | Distributed multi-Pico game              |
-
----
-
-If you want, I can generate:
-
-- A PDF tutorial
-- A more graphical README with images
-- Block diagrams or architecture charts
-- A demonstration script for ME461 presentation
