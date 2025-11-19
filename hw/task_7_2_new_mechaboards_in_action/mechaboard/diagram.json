@@ -85,8 +85,6 @@
     [ "encoder1:GND", "pico:GND.5", "black", [ "h201.6", "v-37.6" ] ],
     [ "pico:GP10", "oled1:SDA", "gold", [ "h-9.6", "v115.2", "h115.13" ] ],
     [ "pico:GP11", "oled1:SCL", "blue", [ "h-19.2", "v115.2", "h114.9" ] ],
-    [ "imu1:SCL", "pico:GP10", "gold", [ "v-134.4", "h0.08" ] ],
-    [ "imu1:SDA", "pico:GP11", "blue", [ "v-124.8", "h0.08" ] ],
     [ "btn2:2.l", "pico:GP16", "gold", [ "h-28.8", "v-38.2" ] ],
     [ "btn1:2.l", "pico:GP17", "gold", [ "h-9.6", "v-47.8" ] ],
     [ "btn3:2.l", "pico:GP18", "gold", [ "h-19.2", "v-9.4" ] ],
@@ -102,7 +100,9 @@
     [ "matrix1:GND", "pico:GND.8", "black", [ "h38.4", "v96", "h-115.2", "v57.6" ] ],
     [ "matrix1:DIN", "pico:GP3", "gold", [ "h28.8", "v67.2", "h-259.2", "v96" ] ],
     [ "matrix1:CS", "pico:GP5", "blue", [ "h19.2", "v48", "h-268.8", "v124.8", "h9.6" ] ],
-    [ "matrix1:CLK", "pico:GP2", "gray", [ "h9.6", "v28.8", "h-249.6", "v96" ] ]
+    [ "matrix1:CLK", "pico:GP2", "gray", [ "h9.6", "v28.8", "h-249.6", "v96" ] ],
+    [ "imu1:SDA", "pico:GP10", "gold", [ "v-9.6", "h-9.52", "v-124.8" ] ],
+    [ "imu1:SCL", "pico:GP11", "blue", [ "v-19.2", "h-19.12", "v-105.6" ] ]
   ],
   "dependencies": {}
 }

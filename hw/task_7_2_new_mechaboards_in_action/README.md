@@ -5,6 +5,8 @@
 This project demonstrates the functionality of all required hardware components soldered onto our custom board.
 Each component is tested in a meaningful and interactive theme to verify correct operation.
 
+--> Until mechaboards arrive, you can acces to the wokwi project we have made from the link: https://wokwi.com/projects/447998027500974081
+
 ---
 
 ## ✅ Demonstrated Hardware Components
@@ -150,7 +152,6 @@ All working as required.
 
 ---
 
-
 # 🪛 Raspberry Pi Pico Wiring Diagram
 
 Below is the complete wiring map for all components used in the project.
@@ -169,23 +170,23 @@ Below is the complete wiring map for all components used in the project.
 |                                         | GP13        | SW     | Pushbutton                                |
 |                                         | 3V3         | VCC    |                                           |
 |                                         | GND         | GND    |                                           |
-| **MPU6050 (IMU)**                 | GP4         | SDA    | I2C1 SDA                                  |
-|                                         | GP5         | SCL    | I2C1 SCL                                  |
+| **MPU6050 (IMU)**                 | GP10        | SDA    | I2C1 SDA                                  |
+|                                         | GP11        | SCL    | I2C1 SCL                                  |
 |                                         | 3V3         | VCC    | Do NOT use 5V                             |
 |                                         | GND         | GND    |                                           |
-| **SSD1306 OLED**                  | GP4         | SDA    | Shared I2C bus with IMU                   |
-|                                         | GP5         | SCL    | Shared I2C bus with IMU                   |
+| **SSD1306 OLED**                  | GP10        | SDA    | Shared I2C bus with IMU                   |
+|                                         | GP11        | SCL    | Shared I2C bus with IMU                   |
 |                                         | 3V3         | VCC    |                                           |
 |                                         | GND         | GND    |                                           |
 | **HC-SR04 Ultrasonic**            | GP2         | TRIG   | Output from Pico                          |
 |                                         | GP3         | ECHO   | INPUT → use voltage divider (5V to 3.3V) |
 |                                         | 5V          | VCC    | Requires 5V                               |
 |                                         | GND         | GND    |                                           |
-| **Piezo Buzzer**                  | GP10        | SIG    | PWM sound output                          |
+| **Piezo Buzzer**                  | GP6         | SIG    | PWM sound output                          |
 |                                         | GND         | GND    |                                           |
-| **8×8 LED Dot Matrix (MAX7219)** | GP18        | DIN    | SPI MOSI                                  |
-|                                         | GP19        | CLK    | SPI SCK                                   |
-|                                         | GP17        | CS     | Chip Select                               |
+| **8×8 LED Dot Matrix (MAX7219)** | GP3         | DIN    | SPI MOSI                                  |
+|                                         | GP          | CLK    | SPI SCK                                   |
+|                                         | GP5         | CS     | Chip Select                               |
 |                                         | 5V          | VCC    | MAX7219 needs 5V                          |
 |                                         | GND         | GND    |                                           |
 
@@ -205,7 +206,6 @@ Below is the complete wiring map for all components used in the project.
                └────────────────────────── Ultrasonic / Buzzer / Matrix
 
 ```
-
 
 ```
        ┌───────────────────────────────────────┐
