@@ -3,6 +3,7 @@ from utime import sleep, ticks_ms, ticks_diff
 from imu import MPU6050
 from max7219 import Matrix8x8
 import ssd1306
+import math
 
 
 # =========================
@@ -44,6 +45,11 @@ class MechaBoard:
         mx_clk_pin=2,
         mx_din_pin=3,
         num_matrices=4
+        # ultrasonic sensors
+        # left_ultra_trig = 7
+        # left_ultra_echo = 8
+        # right_ultra_trig = 20
+        # right_ultra_echo = 21
     ):
         # ---------- Buttons ----------
         self.button_left = Pin(button_left_pin, Pin.IN, Pin.PULL_UP)
@@ -81,7 +87,7 @@ class MechaBoard:
             mosi=Pin(mx_din_pin)
         )
         self.mx_cs = Pin(mx_cs_pin, Pin.OUT)
-        self.matrix = Matrix8x8(self.spi, self.mx_cs, num_matrices)
+        self.matrix = Matrix8x8(self.spi, self.mx_cs, num_matrices, orientation = 2)
         self.num_matrices = num_matrices
         self.matrix_width = 8 * num_matrices
         self.matrix_height = 8
@@ -181,6 +187,15 @@ class MechaBoard:
         self.buzzer.duty_u16(20000)
         sleep(duration_ms / 1000)
         self.buzzer.duty_u16(0)
+
+    #------Ultrasonic Sensors--------
+    # trigL = Pin(left_ultra_trig,Pin.OUT)
+    # echoL = Pin(left_ultra_echo,Pin.IN)
+    # trigR = Pin(right_ultra_trig,Pin.OUT)
+    # echoR = Pin(right_ultra_echo,Pin.IN)
+    # def get_dist(id):
+    #     trig = lambda x: f"{x}trig.high" 
+    #     trig
 
 
 # =========================
@@ -305,8 +320,24 @@ class MusicApp(BaseApp):
         super().__init__(board, name="MUSIC", frame_ms=100)
         # simple melodies as lists of (freq, duration_ms)
         self.melodies = [
-            [(880, 150), (988, 150), (1046, 300)],  # melody 0
-            [(440, 200), (660, 200), (880, 400)],   # melody 1
+            [(82,36),(0,18),(82,36),(0,18),(165,36),(0,18),(82,36),(0,18),
+            (82,36),(0,18),(147,36),(0,18),(82,36),(0,18),(82,36),(0,18),
+            (131,36),(0,18),(82,36),(0,18),(82,36),(0,18),(117,36),(0,18),
+            (82,36),(0,18),(82,36),(0,18),(124,36),(0,18),(131,18),(0,18),
+            (82,36),(0,18),(82,36),(0,18),(165,36),(0,18),(82,36),(0,18),
+            (82,36),(0,18),(147,36),(0,18),(82,36),(0,18),(82,36),(0,18),
+            (131,36),(0,18),(82,36),(0,18),(82,36),(0,18),(117,243),(0,18)
+            ], #At Doom's Gate \m/
+            [
+            (98,86),(104,86),(131,176),(131,176),(104,176),(98,176),(117,176),(131,176),(87,176),
+            (87,176),(104,176),(87,176),(131,176),(104,176),(87,176),(104,176),(87,176),
+            (78,176),(98,176),(78,176),(131,352),(98,352),(78,176),
+            (78,176),(98,176),(78,176),(131,176),(98,176),(78,176),(98,176),(78,176),
+            (98,86),(104,86),(131,176),(131,176),(104,176),(98,176),(117,176),(131,176),(87,176),
+            (87,176),(104,176),(87,176),(131,176),(104,176),(87,176),(104,176),(87,176),
+            (78,176),(98,176),(78,176),(131,352),(98,352),(78,176),
+            (78,176),(156,176),(131,176),(156,176),(131,176),(156,176),(174,176),(156,176)
+            ], #Silver Cord by GOJIRA <3
         ]
         self.current_index = 0
         self.playing = False
@@ -342,6 +373,10 @@ class MusicApp(BaseApp):
         self.board.oled.text("Music App", 0, 0)
         self.board.oled.text(f"Track: {self.current_index}", 0, 16)
         self.board.oled.text("Playing" if self.playing else "Stopped", 0, 32)
+        if self.current_index == 0:
+            self.board.oled.text("DOOM \m/",0,48)
+        if self.current_index == 1:
+            self.board.oled.text("Gojira <3",0,48)
         self.board.oled.show()
 
         # play melody
@@ -355,10 +390,15 @@ class MusicApp(BaseApp):
 
             if now >= self.note_end_time:
                 # start next note
-                self.board.buzzer.freq(freq)
-                self.board.buzzer.duty_u16(20000)
-                self.note_end_time = now + dur
-                self.note_index += 1
+                if freq == 0:
+                    self.board.buzzer.duty_u16(0)
+                    self.note_end_time = now + dur
+                    self.note_index += 1
+                else:
+                    self.board.buzzer.freq(freq)
+                    self.board.buzzer.duty_u16(20000)
+                    self.note_end_time = now + dur
+                    self.note_index += 1
         else:
             # make sure buzzer is off
             self.board.buzzer.duty_u16(0)
