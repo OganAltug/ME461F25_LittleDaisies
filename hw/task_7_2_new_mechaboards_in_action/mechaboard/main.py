@@ -3,6 +3,7 @@ from utime import sleep, ticks_ms, ticks_diff
 from imu import MPU6050
 from max7219 import Matrix8x8
 import ssd1306
+import math
 
 
 # =========================
@@ -81,7 +82,7 @@ class MechaBoard:
             mosi=Pin(mx_din_pin)
         )
         self.mx_cs = Pin(mx_cs_pin, Pin.OUT)
-        self.matrix = Matrix8x8(self.spi, self.mx_cs, num_matrices)
+        self.matrix = Matrix8x8(self.spi, self.mx_cs, num_matrices, orientation = 2)
         self.num_matrices = num_matrices
         self.matrix_width = 8 * num_matrices
         self.matrix_height = 8
