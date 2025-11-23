@@ -7,3 +7,6 @@
 [submodule "components_usage/mg90s-servo/micropython_servo_pdm"]
 	path = components_usage/mg90s-servo/micropython_servo_pdm
 	url = git@github.com:TTitanUA/micropython_servo_pdm.git
+[submodule "pico/pico-Breadboard-Kit"]
+	path = pico/pico-Breadboard-Kit
+	url = git@github.com:rustemsevik/pico-Breadboard-Kit.git
