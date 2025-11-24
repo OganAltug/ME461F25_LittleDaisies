@@ -108,17 +108,11 @@ This validates full sensor–actuator integration.
 
 ```
 /project
-│── src/
+│── mechaboard/
 │    ├── main.py
 │    ├── imu.py
-│    ├── encoder.py
-│    ├── oled.py
-│    ├── buzzer.py
-│    ├── ultrasonic.py
-│    ├── dotmatrix.py
-│── lib/
-│    ├── mpu6050.py
-│    ├── ssd1306.py
+│    ├── ssd1306.py.py
+│    ├── vector3d.py
 │    ├── max7219.py
 │── README.md
 
@@ -160,35 +154,40 @@ Below is the complete wiring map for all components used in the project.
 
 ## 📌 Pinout Summary
 
-| Component                               | Pico Pin    | Signal | Notes                                     |
-| --------------------------------------- | ----------- | ------ | ----------------------------------------- |
-| **Potentiometer**                 | GP26 (ADC0) | AOUT   | Analog input                              |
-|                                         | 3V3         | VCC    | 3.3V                                      |
-|                                         | GND         | GND    | Ground                                    |
-| **Rotary Encoder**                | GP14        | CLK    | Encoder rotation                          |
-|                                         | GP15        | DT     | Encoder rotation                          |
-|                                         | GP13        | SW     | Pushbutton                                |
-|                                         | 3V3         | VCC    |                                           |
-|                                         | GND         | GND    |                                           |
-| **MPU6050 (IMU)**                 | GP10        | SDA    | I2C1 SDA                                  |
-|                                         | GP11        | SCL    | I2C1 SCL                                  |
-|                                         | 3V3         | VCC    | Do NOT use 5V                             |
-|                                         | GND         | GND    |                                           |
-| **SSD1306 OLED**                  | GP10        | SDA    | Shared I2C bus with IMU                   |
-|                                         | GP11        | SCL    | Shared I2C bus with IMU                   |
-|                                         | 3V3         | VCC    |                                           |
-|                                         | GND         | GND    |                                           |
-| **HC-SR04 Ultrasonic**            | GP2         | TRIG   | Output from Pico                          |
-|                                         | GP3         | ECHO   | INPUT → use voltage divider (5V to 3.3V) |
-|                                         | 5V          | VCC    | Requires 5V                               |
-|                                         | GND         | GND    |                                           |
-| **Piezo Buzzer**                  | GP6         | SIG    | PWM sound output                          |
-|                                         | GND         | GND    |                                           |
-| **8×8 LED Dot Matrix (MAX7219)** | GP3         | DIN    | SPI MOSI                                  |
-|                                         | GP          | CLK    | SPI SCK                                   |
-|                                         | GP5         | CS     | Chip Select                               |
-|                                         | 5V          | VCC    | MAX7219 needs 5V                          |
-|                                         | GND         | GND    |                                           |
+|  |
+| - |
+
+| Component                      | Signal | Pico Pin                | Notes                                 |
+| ------------------------------ | ------ | ----------------------- | ------------------------------------- |
+| **Button LEFT**          | BTN1   | **GP0**           | Digital input                         |
+| **Button UP**            | BTN2   | **GP1**           | Digital input                         |
+| **Button DOWN**          | BTN3   | **GP6**           | Digital input                         |
+| **Button RIGHT**         | BTN4   | **GP7**           | Digital input                         |
+| **Rotary Encoder**       | CLK    | **GP14**          | Encoder A                             |
+|                                | DT     | **GP15**          | Encoder B                             |
+|                                | SW     | **GP4**           | Push button                           |
+| **Potentiometer**        | OUT    | **GP26 (ADC0)**   | 0–3.3V analog                        |
+|                                | VCC    | 3V3                     |                                       |
+|                                | GND    | GND                     |                                       |
+| **I2C Bus (OLED + IMU)** | SDA    | **GP12**          | I2C0 SDA                              |
+|                                | SCL    | **GP13**          | I2C0 SCL                              |
+|                                | VCC    | 3V3                     |                                       |
+|                                | GND    | GND                     |                                       |
+| **Buzzer (PWM)**         | SIG    | **GP20**          | PWM audio                             |
+| **MAX7219 Dot Matrix**   | DIN    | **GP3**           | SPI0 MOSI                             |
+|                                | CLK    | **GP2**           | SPI0 SCK                              |
+|                                | CS     | **GP5**           | Chip Select                           |
+|                                | VCC    | 5V                      |                                       |
+|                                | GND    | GND                     |                                       |
+| **HC-SR04 Ultrasonic**   | TRIG   | **GP19**          | Output                                |
+|                                | ECHO   | **GP18**          | Input (must include 5V→3.3V divider) |
+|                                | VCC    | 5V                      |                                       |
+|                                | GND    | GND                     |                                       |
+| **External LED 1**       | LED1   | **GP16**          | Output                                |
+| **External LED 2**       | LED2   | **GP17**          | Output                                |
+| **External LED 3**       | LED3   | **GP21**          | Output                                |
+| **External LED 4**       | LED4   | **GP22**          | Output                                |
+| **Built-in LED**         | LED    | **Pico internal** | Always available                      |
 
 ---
 
@@ -208,25 +207,28 @@ Below is the complete wiring map for all components used in the project.
 ```
 
 ```
-       ┌───────────────────────────────────────┐
-3V3 ───│● 				      ●│─── VBUS (5V)
-GP0 ───│● 				      ●│─── VSYS
-GP1 ───│● 				      ●│─── GND
-GND ───│● 				      ●│─── GP26 (ADC0) ← Potentiometer OUT
-GP2 ───│● ← HC-SR04 TRIG 		      ●│─── GP27 (ADC1)
-GP3 ───│● ← HC-SR04 ECHO(via voltage divider!)●│─── GP28 (ADC2)
-GP4 ───│● ← SDA (MPU6050 + OLED SSD1306)      ●│─── ADC REF
-GP5 ───│● ← SCL (MPU6050 + OLED SSD1306)      ●│─── 3V3_EN
-GND ───│● 				      ●│─── RUN
-GP6 ───│● 				      ●│─── GP22
-GP7 ───│● 				      ●│─── GND
-GP8 ───│●				      ●│─── GP21
-GP9 ───│● 				      ●│─── GP20
-GP10───│● ← Buzzer (PWM audio output) 	      ●│─── GP19 ← MAX7219 CLK
-GP11───│● 				      ●│─── GP18 ← MAX7219 DIN
-GP12───│● 				      ●│─── GP17 ← MAX7219 CS
-GP13───│● ← Rotary Encoder SW (button)        ●│─── GP16
-GND ───│● 				      ●│─── GND
-GP14───│● ← Rotary Encoder CLK 	              ●│─── GP15 ← Rotary Encoder DT
-       └───────────────────────────────────────┘
+                           ┌───────────────────────────────────────────┐
+ 3V3 ──────────────────────│●                                         ●│─── VBUS (5V)
+ GP0  ← Button LEFT        │●                                         ●│─── VSYS
+ GP1  ← Button UP          │●                                         ●│─── GND
+ GND ──────────────────────│●                                         ●│─── GP26 (ADC0) ← Potentiometer OUT
+ GP2  ← MAX7219 CLK        │●                                         ●│─── GP27 (ADC1)
+ GP3  ← MAX7219 DIN        │●                                         ●│─── GP28 (ADC2)
+ GP4  ← Encoder Button SW  │●                                         ●│─── ADC_REF
+ GP5  ← MAX7219 CS         │●                                         ●│─── 3V3_EN
+ GND ──────────────────────│●                                         ●│─── RUN
+ GP6  ← Button DOWN        │●                                         ●│─── GP22 → External LED4
+ GP7  ← Button RIGHT       │●                                         ●│─── GND
+ GP8                       │●                                         ●│─── GP21 → External LED3
+ GP9                       │●                                         ●│─── GP20 → Buzzer (PWM)
+ GP10                      │●                                         ●│─── GP19 → HC-SR04 TRIG
+ GP11                      │●                                         ●│─── GP18 → HC-SR04 ECHO (w/ divider)
+ GP12 ← I2C SDA (OLED+IMU) │●                                         ●│─── GP17 → External LED2
+ GP13 ← I2C SCL (OLED+IMU) │●                                         ●│─── GP16 → External LED1
+ GND ──────────────────────│●                                         ●│─── GND
+ GP14 ← Encoder CLK        │●                                         ●│─── GP15 ← Encoder DT
+                           └───────────────────────────────────────────┘
+
+ Built-in LED is always available as: machine.Pin("LED", OUT)
+
 ```
