@@ -16,9 +16,6 @@ bipolar steppers can't keep up with unipolar steppers at high RPMs due this reas
 
 **REFERENCES:**
 - [Stepper Motor Wiring Basics: Unipolar vs Bipolar](https://blog.orientalmotor.com/stepper-motor-wiring-basics-unipolar-vs-bipolar)
-<!-- - [text](https://www.mouser.com/blog/unipolar-vs-bipolar-drive-for-stepper-motors)
-- [text](https://www.omc-stepperonline.com/support?journal_blog_post_id=127)
-- [text](https://techexplorations.com/guides/arduino/motors/unipolar-vs-bipolar-stepper-motors/) -->
 
 # Q3 & Q4:
 **What is the difference between half and full stepping?**
@@ -41,12 +38,32 @@ varying the current supplied between two coils activated at the same time. And j
 like half-stepping, to keep torque constant we would need to make sure their squraes 
 add up to nominal value.
 
+Overall increasing step size gives smoother operation, less noise and vibrations. However,
+at high rpm's shaft can struggles to keep up with smaller step differences and increasing 
+step size can cause accuracy loss in motor position.
+
 **REFERENCES:**
 - [What is the difference between full-stepping, the half-stepping, and the micro-drive?](https://www.automate.org/motion-control/case-studies/what-is-the-difference-between-full-stepping-the-half-stepping-and-the-micro-drive)
 
+# Q5:
+**What is slew rate**
+"In electronics, the slew rate is defined as the maximum rate of output voltage change per unit time." 
+This metric basically measures the difference between a ideal unit step and the unit step a device can achive.
+In our context this device could be the motor drivers user for stepper motors. If we increase stepping rate too much
+our controller may not be able to keep up and fully activate coils of stepper if it's slew rate is lower than needed.
+
+Another close in name but very different meaning metric is "slew range". Which defines the operation region described 
+by stepping rate and load torque. In this region motor can keep up with all the step signals but can't reverse or start 
+from rest without missing steps. We would need to slow the motor down and move to start range instead to perform these 
+actions. Beyond slew range, motor always misses steps.
+
 **REFERENCES:**
-- [text]()
-- [text]()
-- [text]()
-- [text]()
+- [Advantage and Disadvantage of Stepper Motors:](https://www.eeeguide.com/advantage-and-disadvantage-of-stepper-motors/)
+
+# Q6:
+**What is the relation between torque and angular velocity (~ step rate)?**
+Step rate and torque is inversely proportional and there is a significant drop off as angular velocity increases.
+This related to the inductance inherited within the coils, which makes it very hard for current to flow with high 
+frequencies.
+
 
