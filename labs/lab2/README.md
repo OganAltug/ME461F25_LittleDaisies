@@ -52,7 +52,7 @@ This metric basically measures the difference between a ideal unit step and the 
 In our context this device could be the motor drivers user for stepper motors. If we increase stepping rate too much
 our controller may not be able to keep up and fully activate coils of stepper if it's slew rate is lower than needed.
 
-Another close in name but very different meaning metric is "slew range". Which defines the operation region described 
+Another close in name but very different in meaning metric is "slew range". Which defines the operation region described 
 by stepping rate and load torque. In this region motor can keep up with all the step signals but can't reverse or start 
 from rest without missing steps. We would need to slow the motor down and move to start range instead to perform these 
 actions. Beyond slew range, motor always misses steps.
