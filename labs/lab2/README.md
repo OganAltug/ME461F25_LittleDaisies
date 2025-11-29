@@ -1,3 +1,9 @@
+# HOW TO RUN THE CODE
+- Enter your wifi id and password to the code
+- Look for the ip in terminal output after running the code
+- Enter ip to the browser
+- Enjoy
+
 # I hate myself x2
 all sources and tools used are given in references below
 
