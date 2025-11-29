@@ -1,4 +1,4 @@
-# NO LLM ASSISTANCE WAS TAKEN FOR THIS HOMEWORK, 
+# I hate myself x2
 all sources and tools used are given in references below
 
 # Q1 & Q2 
