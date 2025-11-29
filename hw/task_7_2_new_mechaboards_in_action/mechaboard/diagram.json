@@ -1,0 +1,108 @@
+{
+  "version": 1,
+  "author": "Abdullah Naci Bodur",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "board-pi-pico-w",
+      "id": "pico",
+      "top": -32.05,
+      "left": 13.15,
+      "attrs": { "env": "micropython-20241129-v1.24.1" }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btn1",
+      "top": 169.4,
+      "left": 240,
+      "attrs": { "color": "green", "xray": "1" }
+    },
+    {
+      "type": "board-ssd1306",
+      "id": "oled1",
+      "top": 233.54,
+      "left": 57.83,
+      "attrs": { "i2cAddress": "0x3c" }
+    },
+    { "type": "wokwi-mpu6050", "id": "imu1", "top": 234.22, "left": -45.68, "attrs": {} },
+    { "type": "wokwi-potentiometer", "id": "pot1", "top": -39.7, "left": 259, "attrs": {} },
+    { "type": "wokwi-ky-040", "id": "encoder1", "top": 136.1, "left": -202.4, "attrs": {} },
+    {
+      "type": "wokwi-buzzer",
+      "id": "bz1",
+      "top": -45.6,
+      "left": 155.4,
+      "attrs": { "volume": "0.1" }
+    },
+    { "type": "wokwi-hc-sr04", "id": "ultrasonic1", "top": -17.7, "left": -205.7, "attrs": {} },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btn2",
+      "top": 169.4,
+      "left": 153.6,
+      "attrs": { "color": "green", "xray": "1" }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btn3",
+      "top": 111.8,
+      "left": 240,
+      "attrs": { "color": "green", "xray": "1" }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btn4",
+      "top": 169.4,
+      "left": 326.4,
+      "attrs": { "color": "green", "xray": "1" }
+    },
+    {
+      "type": "wokwi-max7219-matrix",
+      "id": "matrix1",
+      "top": -181.8,
+      "left": -117.36,
+      "attrs": { "chain": "4" }
+    }
+  ],
+  "connections": [
+    [ "pico:3V3", "bz1:2", "red", [ "h38.71", "v67.2", "h58" ] ],
+    [ "pico:3V3", "oled1:VCC", "red", [ "h0" ] ],
+    [ "imu1:VCC", "pico:3V3", "red", [ "v-28.8", "h76.88", "v-172.8" ] ],
+    [ "pot1:VCC", "pico:3V3", "red", [ "v19.2", "h-0.8", "v48", "h-192", "v-76.8" ] ],
+    [ "pot1:GND", "pico:GND.8", "black", [ "v19.2", "h-67.2", "v-96", "h-67.2", "v48" ] ],
+    [ "pico:GND.5", "btn2:1.l", "black", [ "h48.31", "v38.44" ] ],
+    [ "btn1:1.l", "pico:GND.5", "black", [ "h-9.6", "v-19.2", "h-86.4", "v-19.2" ] ],
+    [ "btn3:1.l", "pico:GND.5", "black", [ "h-86.4", "v19.2" ] ],
+    [
+      "btn4:1.l",
+      "pico:GND.5",
+      "black",
+      [ "h-9.6", "v-19.2", "h-76.8", "v-9.6", "h-76.8", "v-9.6" ]
+    ],
+    [ "oled1:GND", "pico:GND.5", "black", [ "v-96" ] ],
+    [ "imu1:GND", "pico:GND.5", "black", [ "v-38.4", "h76.88", "v-57.6" ] ],
+    [ "encoder1:VCC", "pico:3V3", "red", [ "h182.4", "v-153.2" ] ],
+    [ "encoder1:GND", "pico:GND.5", "black", [ "h201.6", "v-37.6" ] ],
+    [ "pico:GP10", "oled1:SDA", "gold", [ "h-9.6", "v115.2", "h115.13" ] ],
+    [ "pico:GP11", "oled1:SCL", "blue", [ "h-19.2", "v115.2", "h114.9" ] ],
+    [ "btn2:2.l", "pico:GP16", "gold", [ "h-28.8", "v-38.2" ] ],
+    [ "btn1:2.l", "pico:GP17", "gold", [ "h-9.6", "v-47.8" ] ],
+    [ "btn3:2.l", "pico:GP18", "gold", [ "h-19.2", "v-9.4" ] ],
+    [ "btn4:2.l", "pico:GP19", "gold", [ "h0", "v-95.8", "h-182.4", "v19.2" ] ],
+    [ "pico:GP28", "pot1:SIG", "gold", [ "h0" ] ],
+    [ "ultrasonic1:VCC", "pico:VBUS", "red", [ "v9.6", "h-86.4", "v-124.8", "h326.4", "v19.2" ] ],
+    [ "ultrasonic1:GND", "pico:GND.3", "black", [ "v0" ] ],
+    [ "encoder1:CLK", "pico:GP14", "blue", [ "h67.2", "v9.6", "h9.6" ] ],
+    [ "encoder1:DT", "pico:GP15", "gold", [ "h57.6", "v0.1" ] ],
+    [ "encoder1:SW", "pico:GP13", "gray", [ "h38.4", "v0.1" ] ],
+    [ "pico:GP6", "bz1:1", "green", [ "h-19.2", "v-115.2", "h134.4", "v105.6", "h48" ] ],
+    [ "matrix1:V+", "pico:VBUS", "red", [ "h48", "v96", "h-153.6", "v48" ] ],
+    [ "matrix1:GND", "pico:GND.8", "black", [ "h38.4", "v96", "h-115.2", "v57.6" ] ],
+    [ "matrix1:DIN", "pico:GP3", "gold", [ "h28.8", "v67.2", "h-259.2", "v96" ] ],
+    [ "matrix1:CS", "pico:GP5", "blue", [ "h19.2", "v48", "h-268.8", "v124.8", "h9.6" ] ],
+    [ "matrix1:CLK", "pico:GP2", "gray", [ "h9.6", "v28.8", "h-249.6", "v96" ] ],
+    [ "imu1:SDA", "pico:GP10", "gold", [ "v-9.6", "h-9.52", "v-124.8" ] ],
+    [ "imu1:SCL", "pico:GP11", "blue", [ "v-19.2", "h-19.12", "v-105.6" ] ]
+  ],
+  "dependencies": {}
+}

@@ -1,0 +1,25 @@
+1 - How is encoder working? What is the working principle of encoder?
+Potantiometer has noşse in it, it has the analog signal, 
+
+2 - Our pico has 12 bits, that means 2 to the  power of 12 equals 4096,
+it means that we can detect 3.3 v / 4096 signal.
+
+3 - If the input condition is repeated and the output is comes close,
+it is repeatable, consistant, precise. And also it is giving the actual 
+value, it is accurate.
+
+4 - After every measurement, the small error throughout the measurement
+is called standard deviation.
+
+5 - There are two types of encoder: Incremental and absolute encoders.
+Absolute encoder or potentiometer can tell the absolute position of the
+sendor. Wherease incremental sensors sends only the displacement.
+
+6 - 2 assignment: 1 st one is going to be a app. Everything on the PCB.
+Only do not use servo motor. Do not use anythşing has inductive load in it.
+Because they like to use sharp peaks. If you do not use peak 
+
+7 - Only DC voltage, AD converters, everything should be displayed on pc,
+get the menu page, list all the capabilities of the scope, list all the
+capabilities of the modern day scope for starting, very usable interface,
+voltage range 0-3.3 V, min 2 channel, 

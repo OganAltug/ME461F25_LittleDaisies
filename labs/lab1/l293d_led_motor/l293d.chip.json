@@ -1,0 +1,10 @@
+{
+  "name": "L293D",
+  "author": "Abdullah Naci Bodur",
+  "pins": [
+    "EN1",  "IN1",  "OUT1",  "GND",  "GND",  "OUT2",  "IN2",  "VCC2",
+    "EN2",  "IN3",  "OUT3",  "GND",  "GND",  "OUT4",  "IN4",  "VCC1"
+  ],
+  "controls": [
+  ]
+}
