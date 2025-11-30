@@ -2,61 +2,75 @@ from machine import Pin, PWM
 import sys
 import select
 
-# --- Setup Motor Pins with PWM ---
-# We use PWM to control speed. 
-# Frequency of 1000Hz is standard for DC motors.
+# --- Hardware Setup (Based on Script A) ---
 
-# Motor A (Left)
-in1 = PWM(Pin(0))
-in2 = PWM(Pin(1))
-in1.freq(1000)
-in2.freq(1000)
+# MOTOR 1 (Left)
+# dig_8, dig_9 are direction pins. dig_10 is PWM speed.
+m1_dir_a = Pin(12, Pin.OUT)
+m1_dir_b = Pin(13, Pin.OUT)
+m1_pwm = PWM(Pin(14))
+m1_pwm.freq(50)        # Using 50Hz as established in your working code
+m1_pwm.duty_u16(0)     # Ensure it starts off
 
-# Motor B (Right)
-in3 = PWM(Pin(17))
-in4 = PWM(Pin(16))
-in3.freq(1000)
-in4.freq(1000)
+# MOTOR 2 (Right)
+# dig_19, dig_20 are direction pins. dig_21 is PWM speed.
+m2_dir_a = Pin(19, Pin.OUT)
+m2_dir_b = Pin(20, Pin.OUT)
+m2_pwm = PWM(Pin(21))
+m2_pwm.freq(50)        # Using 50Hz
+m2_pwm.duty_u16(0)     # Ensure it starts off
 
-# Global State
+# --- Global State Variables ---
 current_speed_percent = 0
 current_direction = "STOP" # STOP, FWD, BWD
-active_motors = "BOTH" # A, B, BOTH
+active_motors = "BOTH"     # A, B, BOTH
 
-def set_motor_speed(pwm_pin_a, pwm_pin_b, speed_percent, direction):
+def set_motor_state(dir_pin_a, dir_pin_b, pwm_pin, speed_percent, direction):
+    """
+    Controls the 3-pin motor driver logic.
+    """
     # Convert percent (0-100) to u16 duty (0-65535)
     duty = int((speed_percent / 100) * 65535)
     
     if direction == "STOP":
-        pwm_pin_a.duty_u16(0)
-        pwm_pin_b.duty_u16(0)
+        # Stop PWM and set logical low
+        dir_pin_a.value(0)
+        dir_pin_b.value(0)
+        pwm_pin.duty_u16(0)
+        
     elif direction == "FWD":
-        # Forward: Pin A gets speed, Pin B is Low
-        pwm_pin_a.duty_u16(duty)
-        pwm_pin_b.duty_u16(0)
+        # Direction Logic: A=1, B=0 (Adjust if wheel spins backwards)
+        dir_pin_a.value(1)
+        dir_pin_b.value(0)
+        pwm_pin.duty_u16(duty)
+        
     elif direction == "BWD":
-        # Backward: Pin A is Low, Pin B gets speed
-        pwm_pin_a.duty_u16(0)
-        pwm_pin_b.duty_u16(duty)
+        # Direction Logic: A=0, B=1
+        dir_pin_a.value(0)
+        dir_pin_b.value(1)
+        pwm_pin.duty_u16(duty)
 
 def update_motors():
-    # Motor A Logic
+    """
+    Applies global state variables to physical motors
+    """
+    # --- Motor A Logic ---
     if active_motors in ["A", "BOTH"]:
-        set_motor_speed(in1, in2, current_speed_percent, current_direction)
+        set_motor_state(m1_dir_a, m1_dir_b, m1_pwm, current_speed_percent, current_direction)
     else:
-        # If motor not selected, stop it
-        set_motor_speed(in1, in2, 0, "STOP")
+        # If motor not selected, force stop
+        set_motor_state(m1_dir_a, m1_dir_b, m1_pwm, 0, "STOP")
         
-    # Motor B Logic
+    # --- Motor B Logic ---
     if active_motors in ["B", "BOTH"]:
-        set_motor_speed(in3, in4, current_speed_percent, current_direction)
+        set_motor_state(m2_dir_a, m2_dir_b, m2_pwm, current_speed_percent, current_direction)
     else:
-        set_motor_speed(in3, in4, 0, "STOP")
+        set_motor_state(m2_dir_a, m2_dir_b, m2_pwm, 0, "STOP")
 
 def parse_command(cmd_str):
     """
+    Parses Serial commands from PC
     Expected format: "CMD:VALUE"
-    Examples: "SPD:50", "DIR:FWD", "MOT:A", "ACT:START", "ACT:STOP"
     """
     global current_speed_percent, current_direction, active_motors
     
@@ -69,13 +83,15 @@ def parse_command(cmd_str):
 
         if key == "SPD":
             current_speed_percent = int(val)
+        
         elif key == "MOT":
             active_motors = val # A, B, or BOTH
+        
         elif key == "DIR":
-            # Only update direction if we are currently moving? 
-            # Or just set state. Let's set state, logic handles it.
+            # Update direction state
             if current_direction != "STOP":
                 current_direction = val
+        
         elif key == "ACT":
             if val == "STOP":
                 current_direction = "STOP"
@@ -83,6 +99,7 @@ def parse_command(cmd_str):
                 # Default to forward if just starting
                 current_direction = "FWD" 
                 
+        # Apply changes immediately
         update_motors()
         print(f"ACK:{key}={val}") # Send acknowledgement back to PC
         
@@ -90,22 +107,15 @@ def parse_command(cmd_str):
         print(f"ERR:{e}")
 
 # --- Main Loop ---
+# Ensure motors are off at boot
+update_motors()
 print("Pico Ready. Waiting for Serial Commands...")
 
 # Polling loop for Serial Data
 while True:
     # Check if data is available on stdin (USB Serial)
+    # This effectively waits for your PC Python script to send data
     if select.select([sys.stdin], [], [], 0)[0]:
         line = sys.stdin.readline()
         if line:
             parse_command(line)
-            
-    # No sleep needed here as select is non-blocking but efficient
-
-
-
-
-
-
-
-    

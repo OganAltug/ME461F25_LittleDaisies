@@ -11,10 +11,10 @@ PORT = 8080
 
 # --- Setup Motor Pins with PWM ---
 # Motor A (Left)
-in1 = PWM(Pin(0))
-in2 = PWM(Pin(1))
-in1.freq(1000)
-in2.freq(1000)
+in1 = PWM(Pin(12))
+in2 = PWM(Pin(13))
+in1.freq(100)
+in2.freq(100)
 
 # Motor B (Right)
 in3 = PWM(Pin(17))
