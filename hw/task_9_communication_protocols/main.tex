@@ -1,0 +1,385 @@
+\input{setup}
+
+\title{Communication Protocols}
+\subtitle{ME461 - Group: Little Daisies}
+\author[Little Daisies]{Abdullah~Naci~Bodur\and
+        Buğra~Çınaroğlu\and
+        Ogan~Altuğ~Okutan
+}
+\date[ME461 Fall 25-26]{Fall 2025-2026}
+
+
+\begin{document}
+
+% ------------------------------------
+\frame{\titlepage}
+% ------------------------------------
+
+% ------------------------------------
+\section{Overview}
+% ------------------------------------
+
+\begin{frame}{Table of Contents}
+\tableofcontents
+\end{frame}
+
+% ------------------------------------
+\section{Introduction}
+% ------------------------------------
+
+\begin{frame}{Serial vs. Parallel}
+\begin{itemize}
+    \item \textbf{Parallel Communication:}
+    \begin{itemize}
+        \item Multiple wires carry multiple bits simultaneously.
+        \item Fast but bulky and expensive (cables, crosstalk).
+    \end{itemize}
+    \item \textbf{Serial Communication:}
+    \begin{itemize}
+        \item Data is sent one bit at a time over a single channel.
+        \item Reduces wiring complexity and cost.
+        \item Standard for most modern embedded systems.
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+% ------------------------------------
+\section{Asynchronous Communication (UART & RS-232)}
+% ------------------------------------
+
+\begin{frame}{Asynchronous Basics}
+\begin{itemize}
+    \item \textbf{No Clock Line:} Devices must agree on a timing speed (\textit{Baud Rate}) beforehand.
+    \item \textbf{Synchronization:} Done via "Start" and "Stop" bits.
+    \item \textbf{Common Protocols:} UART (Logic Level), RS-232 (Voltage Level).
+\end{itemize}
+\end{frame}
+
+\begin{frame}{UART: Working Principle}
+\textbf{Universal Asynchronous Receiver-Transmitter (UART)}
+\begin{enumerate}
+    \item \textbf{Parallel-to-Serial:} CPU writes byte to Transmit Register $\rightarrow$ Shift Register pushes bits out one by one.
+    \item \textbf{Serial-to-Parallel:} Receiver samples line $\rightarrow$ shifts bits in $\rightarrow$ CPU reads byte.
+\end{enumerate}
+
+\begin{itemize}
+    \item \textbf{Wiring:} Cross-coupled (TX connects to RX).
+    \item \textbf{Topology:} Strictly Point-to-Point (1 Master, 1 Slave).
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{UART Frame Structure}
+Standard 8N1 Frame (8 data bits, No parity, 1 stop bit):
+
+\begin{verbatim}
+Idle (High)
+   |
+   v
+ Start | D0  D1  D2  D3  D4  D5  D6  D7 | Stop
+  (0)  |            DATA                | (1)
+\end{verbatim}
+
+\begin{itemize}
+    \item \textbf{Start Bit:} Pulls line LOW (0) to wake up receiver.
+    \item \textbf{Data:} Sent LSB (Least Significant Bit) first.
+    \item \textbf{Parity (Optional):} Error checking bit.
+    \item \textbf{Stop Bit:} Pulls line HIGH (1) to reset for next byte.
+\end{itemize}
+\end{frame}
+
+% --- ME461 EXAMPLE: UART ---
+\begin{frame}{ME461 Application: UART Scope Project}
+\begin{columns}
+    \begin{column}{0.6\textwidth}
+        \textbf{Project Context:}
+        \begin{itemize}
+            \item Used for \textbf{Raspberry Pi Pico programming} (REPL) and the \textbf{Scope Project}.
+            \item The Pico reads signals/PWM and transmits data to the PC for visualization.
+        \end{itemize}
+        
+        \vspace{0.2cm}
+        \textbf{Configuration:}
+        \begin{itemize}
+            \item \textbf{Baud Rate:} 115200
+            \item \textbf{Connection:} UART-over-USB or physical UART pins.
+        \end{itemize}
+    \end{column}
+    
+    \begin{column}{0.35\textwidth}
+        \begin{block}{Pico UART Pinout}
+        \centering
+        \begin{tabular}{ll}
+        \toprule
+        \textbf{Function} & \textbf{Pin} \\
+        \midrule
+        \textbf{TX} & GP0 \\
+        \textbf{RX} & GP1 \\
+        \textbf{GND} & Any GND \\
+        \bottomrule
+        \end{tabular}
+        \end{block}
+        
+        \vspace{0.2cm}
+        \footnotesize \textit{*Scope project sends PWM values to Python script via this link.}
+    \end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{RS-232: The Physical Layer}
+UART is a logic protocol; RS-232 is the voltage standard often used with it.
+\begin{itemize}
+    \item \textbf{Purpose:} Long distance communication (up to 15m) where 5V signals would degrade.
+    \item \textbf{Voltage Levels (Inverted Logic):}
+    \begin{itemize}
+        \item Logic 0: +3V to +15V
+        \item Logic 1: -3V to -15V
+    \end{itemize}
+\end{itemize}
+
+
+
+\begin{verbatim}
+          +15V  ------+       +-------
+    Logic 0           |       |
+          -15V        +-------+
+    Logic 1
+\end{verbatim}
+\textit{Note: You need a MAX232 converter to connect this to a microcontroller.}
+\end{frame}
+
+% ------------------------------------
+\section{Synchronous Communication (SPI)}
+% ------------------------------------
+
+\begin{frame}{SPI: Serial Peripheral Interface}
+\textbf{Overview:}
+\begin{itemize}
+    \item Synchronous: Uses a dedicated clock line (SCK).
+    \item Architecture: Master-Slave.
+    \item Duplex: \textbf{Full Duplex} (Send and Receive simultaneously).
+\end{itemize}
+
+\textbf{Wiring (4 Lines):}
+\begin{enumerate}
+    \item \textbf{SCK:} Serial Clock (generated by Master).
+    \item \textbf{MOSI:} Master Out Slave In (Data to slave).
+    \item \textbf{MISO:} Master In Slave Out (Data to master).
+    \item \textbf{CS/SS:} Chip Select (Active Low, selects the specific slave).
+\end{enumerate}
+\end{frame}
+
+\begin{frame}{SPI Topology}
+
+\begin{itemize}
+    \item \textbf{Standard Mode:} One CS line per Slave.
+    \item \textbf{Daisy Chain:} Slaves connected in series (Output of one goes to Input of next).
+\end{itemize}
+
+\textbf{Advantages:}
+\begin{itemize}
+    \item Fastest serial protocol (10MHz - 100MHz).
+    \item No complex addressing (hardware selection via CS).
+\end{itemize}
+\textbf{Disadvantages:}
+\begin{itemize}
+    \item Requires many wires (3 + N slaves).
+    \item No hardware acknowledgment (blind transmission).
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{SPI Timing Modes}
+SPI has 4 modes based on Clock Polarity (CPOL) and Phase (CPHA).
+\begin{itemize}
+    \item \textbf{CPOL:} Idle state of clock (High or Low).
+    \item \textbf{CPHA:} Data sampled on Rising or Falling edge.
+\end{itemize}
+
+\begin{verbatim}
+Mode 0 (Standard):
+SCK:   _   _   _   _
+      / \_/ \_/ \_/ \_  (Sample on Rising Edge)
+MOSI:  Valid Data
+\end{verbatim}
+\end{frame}
+
+% --- ME461 EXAMPLE: SPI ---
+\begin{frame}{ME461 Application: SPI Tetris Game}
+\begin{columns}
+    \begin{column}{0.6\textwidth}
+        \textbf{Project Context:}
+        \begin{itemize}
+            \item Used in the \textbf{Tetris Game} project.
+            \item High-speed communication required to update the LED grid matrix smoothly.
+        \end{itemize}
+        
+        \vspace{0.2cm}
+        \textbf{Hardware:}
+        \begin{itemize}
+            \item \textbf{Master:} Raspberry Pi Pico
+            \item \textbf{Slave:} MAX7219 Dot Matrix Driver
+        \end{itemize}
+    \end{column}
+    
+    \begin{column}{0.35\textwidth}
+        \begin{block}{Pico SPI0 Pinout}
+        \centering
+        \begin{tabular}{ll}
+        \toprule
+        \textbf{Function} & \textbf{Pin} \\
+        \midrule
+        \textbf{MOSI} & GP19 \\
+        \textbf{SCK} & GP18 \\
+        \textbf{CS (SS)} & GP17 \\
+        \textbf{VCC} & 5V (VBUS) \\
+        \bottomrule
+        \end{tabular}
+        \end{block}
+        
+        \vspace{0.2cm}
+        \footnotesize \textit{*MISO is not used here (Display only receives data).}
+    \end{column}
+\end{columns}
+\end{frame}
+
+
+
+
+% ------------------------------------
+\section{Synchronous Communication (I2C)}
+% ------------------------------------
+
+\begin{frame}{I\textsuperscript{2}C: Inter-Integrated Circuit}
+\textbf{Overview:}
+\begin{itemize}
+    \item Synchronous, Half-Duplex.
+    \item \textbf{2 Wires Only:} SDA (Data) and SCL (Clock).
+    \item \textbf{Addressed Based:} No Chip Select lines; devices have a 7-bit address.
+\end{itemize}
+
+\textbf{Key Features:}
+\begin{itemize}
+    \item Multiple Masters and Multiple Slaves allowed.
+    \item \textbf{Open Drain:} Requires Pull-up Resistors (4.7k$\Omega$).
+    \item \textbf{Clock Stretching:} Slave can hold SCL low to pause Master.
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{I\textsuperscript{2}C Frame Structure}
+
+
+[Image of I2C data packet structure]
+
+\begin{verbatim}
+[Start][Address (7bit)] [R/W] [ACK] [Data (8bit)] [ACK][Stop]
+\end{verbatim}
+
+\begin{enumerate}
+    \item \textbf{Start Condition:} SDA goes LOW while SCL is HIGH.
+    \item \textbf{Address:} Master broadcasts target address.
+    \item \textbf{ACK/NACK:} Receiver pulls SDA low to acknowledge receipt.
+    \item \textbf{Stop Condition:} SDA goes HIGH while SCL is HIGH.
+\end{enumerate}
+\end{frame}
+
+\begin{frame}{I\textsuperscript{2}C Pros and Cons}
+\textbf{Advantages:}
+\begin{itemize}
+    \item Low pin count (just 2 pins for up to 127 devices).
+    \item Hardware flow control (ACK/NACK) ensures data integrity.
+    \item Standard for sensors (IMUs, Temp sensors, EEPROMs).
+\end{itemize}
+
+\textbf{Disadvantages:}
+\begin{itemize}
+    \item Slower than SPI (Standard: 100kHz, Fast: 400kHz).
+    \item Complex software implementation compared to SPI.
+    \item Pull-up resistors consume power.
+\end{itemize}
+\end{frame}
+
+% --- ME461 EXAMPLE: I2C ---
+\begin{frame}{ME461 Application: I2C Mechaboard}
+\begin{columns}
+    \begin{column}{0.6\textwidth}
+        \textbf{Project Context:}
+        \begin{itemize}
+            \item Used on the \textbf{Mechaboard} platform.
+            \item \textbf{Bus Sharing:} Two different sensors are controlled using the same single pair of I2C pins.
+        \end{itemize}
+        
+        \vspace{0.2cm}
+        \textbf{Devices on Bus:}
+        \begin{enumerate}
+            \item \textbf{MPU6050:} IMU (Accel/Gyro)
+            \item \textbf{SSD1306:} OLED Display
+        \end{enumerate}
+    \end{column}
+    
+    \begin{column}{0.35\textwidth}
+        \begin{block}{Pico I2C0 Pinout}
+        \centering
+        \begin{tabular}{ll}
+        \toprule
+        \textbf{Function} & \textbf{Pin} \\
+        \midrule
+        \textbf{SDA} & GP4 \\
+        \textbf{SCL} & GP5 \\
+        \textbf{VCC} & 3.3V \\
+        \bottomrule
+        \end{tabular}
+        \end{block}
+        
+        \vspace{0.2cm}
+        \footnotesize \textit{*Different addresses allow both chips to talk on GP4/GP5 simultaneously.}
+    \end{column}
+\end{columns}
+\end{frame}
+
+
+
+
+% ------------------------------------
+\section{Summary & Comparison}
+% ------------------------------------
+
+\begin{frame}{Comparison Matrix}
+\begin{center}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Feature} & \textbf{UART / RS-232} & \textbf{SPI} & \textbf{I\textsuperscript{2}C} \\
+\hline
+\textbf{Wires} & 2 (TX, RX) & 4 (SCK, MOSI, MISO, CS) & 2 (SDA, SCL) \\
+\hline
+\textbf{Synchronous} & No (Async) & Yes & Yes \\
+\hline
+\textbf{Speed} & Slow (<115 kbps typical) & Fastest (>10 Mbps) & Medium (100-400 kbps) \\
+\hline
+\textbf{Topology} & Point-to-Point & Single Master, Multi-Slave & Multi-Master, Multi-Slave \\
+\hline
+\textbf{Flow Control} & None / Software & None & ACK/NACK \\
+\hline
+\textbf{Duplex} & Full Duplex & Full Duplex & Half Duplex \\
+\hline
+\textbf{Best For} & PC $\leftrightarrow$ MCU, Debugging & Screens, SD Cards & Sensors, Low Pin Count \\
+\hline
+\end{tabular}%
+}
+\end{center}
+\end{frame}
+
+\begin{frame}{Conclusion}
+\textbf{How to choose?}
+\begin{itemize}
+    \item Need simple PC logging or long distance? $\rightarrow$ \textbf{UART / RS-232}
+    \item Need high speed data transfer (Display, Flash Memory)? $\rightarrow$ \textbf{SPI}
+    \item Need many sensors with few pins? $\rightarrow$ \textbf{I\textsuperscript{2}C}
+\end{itemize}
+
+\vspace{1cm}
+\begin{center}
+\textbf{Questions?}
+\end{center}
+\end{frame}
+
+\end{document}
