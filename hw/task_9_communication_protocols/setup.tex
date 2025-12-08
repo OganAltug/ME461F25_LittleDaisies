@@ -1,0 +1,70 @@
+\documentclass{beamer}
+\usepackage{graphicx, float} % Required for inserting images
+\graphicspath{{figures/}} %figure directory path
+\usepackage{amsmath, amssymb, amsthm}
+% \usepackage{hyperref} %make references clicable
+\usepackage{caption} %for subfigures
+\usepackage{subcaption} %for subfigures
+\usepackage{listings} %to insert code
+\usepackage{pdfpages} %to insert pdf files
+\usepackage{tikz}
+
+\usetheme{Madrid}
+\usecolortheme{rose}
+\setbeamertemplate{navigation symbols}{}
+% \setbeamertemplate{headline}{}
+% \setbeamercovered{transparent}
+% \usebackgroundtemplate{\includegraphics[width=0.2\paperwidth]{figures/daisies.png}}
+\setbeamertemplate{background canvas}{%
+  \begin{tikzpicture}[remember picture, overlay]
+    \node[anchor=south east, % Anchor the image at its bottom-right corner
+          inner sep=0pt] % No padding around the image
+          at (current page.south east) % Position the node at the slide's bottom-right
+          {
+            \includegraphics[width=1.5cm]{figures/daisies.png}
+          };
+  \end{tikzpicture}
+}
+
+\usepackage{xcolor}
+\definecolor{LightGray}{gray}{0.95}
+%***Code Environment***
+\usepackage{minted}
+\usemintedstyle{tango}
+\usepackage{tcolorbox}
+\tcbuselibrary{minted,skins}
+%for python
+\newtcblisting{pythoncode}{
+    listing engine=minted,
+    listing only,
+    minted language=python,
+    minted options={
+        fontsize=\footnotesize,
+        linenos,
+        frame=none,
+        baselinestretch=1.2
+    },
+    colback=LightGray,
+    colframe=black!30,
+    boxrule=0.3pt,
+    arc=2mm,
+    left=2mm,
+    right=2mm,
+    top=1mm,
+    bottom=1mm
+}
+
+% %****MARGIN CUSTOMIZATION****
+% \usepackage{geometry}
+% \newgeometry{
+%     top=1in,
+%     bottom=1in,
+%     outer=1in,
+%     inner=1in,
+% }
+% \renewcommand{\baselinestretch}{1.67} %line height
+% \setlength{\parindent}{0pt} %Parskip and parindent
+% \setlength{\parskip}{0.2em}
+
+%****CUSTOM FUNCTIONS****
+\newcommand{\vc}[1]{\textbf{#1}}
