@@ -1,4 +1,5 @@
 import machine
+from machine import Pin
 import time
 import math
 import _thread
@@ -7,9 +8,9 @@ import socket
 import json
 
 # --- CONFIGURATION ---
-SSID = "YOUR_WIFI_ID"
-PASSWORD = "YOUR_WIFI_PASSWORD"
-MOTOR_PINS = [13, 26, 27, 28] 
+SSID = ""
+PASSWORD = ""
+MOTOR_PINS = [0, 1, 2, 3] 
 
 # --- SHARED GLOBAL STATE ---
 state_direction = 1       # 1 = CW, -1 = CCW
@@ -24,6 +25,9 @@ state_single_step_req = False
 custom_sequence = [[1,0,0,0], [0,1,0,0], [0,0,1,0], [0,0,0,1]] 
 current_step_index = 0.0  
 current_pin_state = [0, 0, 0, 0]
+
+# Onboard Led
+onboard_led = Pin("LED", Pin.OUT)
 
 # --- MOTOR LOGIC (CORE 0) ---
 def motor_core():
@@ -124,9 +128,13 @@ def server_core():
     wlan.active(True)
     wlan.connect(SSID, PASSWORD)
     
-    while not wlan.isconnected(): time.sleep(1)
+    while not wlan.isconnected():
+        onboard_led.toggle()
+        time.sleep(1)
+    
     print('IP Address:', wlan.ifconfig()[0])
-
+    onboard_led.high()
+    
     addr = socket.getaddrinfo('0.0.0.0', 80)[0][-1]
     s = socket.socket()
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
