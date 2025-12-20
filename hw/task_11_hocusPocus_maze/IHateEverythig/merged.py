@@ -7,11 +7,18 @@ import time
 import multiprocessing
 from collections import deque
 
+# Try to import OpenCV for noise reduction
+try:
+    import cv2
+    OPENCV_AVAILABLE = True
+except ImportError:
+    OPENCV_AVAILABLE = False
+
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QPushButton, QLabel, QComboBox, 
                              QSpinBox, QTextEdit, QGraphicsView, QGraphicsScene, 
                              QGroupBox, QFileDialog, QLineEdit, QCheckBox)
-from PyQt6.QtCore import Qt, pyqtSlot, QThread, pyqtSignal, QPoint
+from PyQt6.QtCore import Qt, pyqtSlot, QThread, pyqtSignal, QPoint, QRectF
 from PyQt6.QtGui import QImage, QPixmap, QPainter, QPen, QColor, QBrush
 
 # ==========================================
@@ -572,7 +579,6 @@ class SolverWorker(QThread):
 
         if mode == 'Part1':
             algo = self.config.get('algo', 'BFS')
-            # Check for bidirectional flag (default False)
             bidirectional = self.config.get('bidirectional', False)
             
             self.sig_log.emit(f"Algo: {algo} | BiDi: {bidirectional}")
@@ -598,7 +604,7 @@ class SolverWorker(QThread):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Maze Runner: DOOM Edition V_BiDi_Combined")
+        self.setWindowTitle("Maze Runner: DOOM Edition V_FIT_VIEW")
         self.resize(1300, 950)
         self.apply_styles()
         self.maze_image = None; self.balls = []; self.worker = None; self.current_scale = 1.0
@@ -636,10 +642,8 @@ class MainWindow(QMainWindow):
         self.combo_algo = QComboBox(); self.combo_algo.addItems(["BFS", "DFS", "A*", "Greedy", "Uniform Cost"])
         p1_l.addWidget(self.combo_algo)
         
-        # --- NEW: Bidirectional Checkbox ---
         self.check_bi = QCheckBox("Enable Bidirectional Search")
         p1_l.addWidget(self.check_bi)
-        # -----------------------------------
         
         self.btn_run1 = QPushButton("► RUN PART 1 SOLVER"); self.btn_run1.clicked.connect(self.run_part1); self.btn_run1.setEnabled(False)
         p1_l.addWidget(self.btn_run1)
@@ -670,11 +674,32 @@ class MainWindow(QMainWindow):
         self.btn_stop = QPushButton("■ EMERGENCY STOP"); self.btn_stop.setStyleSheet("background-color: #FF5500; color: black; font-weight: bold;")
         self.btn_stop.clicked.connect(self.terminate_search); self.btn_stop.setEnabled(False)
         layout.addWidget(self.btn_stop); layout.addStretch()
+
+        # --- FILE IO & PREPROCESSING ---
+        f_box = QGroupBox("FILE I/O")
+        f_l = QVBoxLayout()
+        
+        # Noise Reduction Checkbox
+        self.check_noise = QCheckBox("Denoise (Median Blur)")
+        self.check_noise.setToolTip("Useful for JPEGs. Requires OpenCV.")
+        if not OPENCV_AVAILABLE:
+            self.check_noise.setEnabled(False)
+            self.check_noise.setText("Denoise (No OpenCV)")
+        f_l.addWidget(self.check_noise)
+
         h_files = QHBoxLayout()
         btn_save = QPushButton("Save Img"); btn_save.clicked.connect(self.save_maze)
         btn_load = QPushButton("Load Img"); btn_load.clicked.connect(self.load_maze)
         h_files.addWidget(btn_save); h_files.addWidget(btn_load)
-        layout.addLayout(h_files)
+        f_l.addLayout(h_files)
+        
+        # --- NEW: FIT BUTTON ---
+        btn_fit = QPushButton("⤢ FIT VIEW"); btn_fit.clicked.connect(self.fit_view_to_screen)
+        f_l.addWidget(btn_fit)
+        
+        f_box.setLayout(f_l)
+        layout.addWidget(f_box)
+        
         self.layout_main.addWidget(panel)
 
     def setup_view(self):
@@ -686,6 +711,12 @@ class MainWindow(QMainWindow):
         panel = QWidget(); panel.setFixedWidth(250); l = QVBoxLayout()
         l.addWidget(QLabel("SYSTEM LOGS")); self.log_box = QTextEdit(); self.log_box.setReadOnly(True)
         l.addWidget(self.log_box); panel.setLayout(l); self.layout_main.addWidget(panel)
+        
+    def fit_view_to_screen(self):
+        """ Scales the current scene content to fit strictly within the view """
+        if self.scene.itemsBoundingRect().width() > 0:
+            self.view.fitInView(self.scene.itemsBoundingRect(), Qt.AspectRatioMode.KeepAspectRatio)
+            self.log("View fitted to screen.")
 
     def generate_maze(self, mode):
         self.log(f"Generating Mode {mode}..."); diff = self.spin_diff.value(); exits = self.spin_exits.value()
@@ -710,7 +741,6 @@ class MainWindow(QMainWindow):
     def run_part1(self):
         if self.maze_image is None: return
         self.display_maze(); self.set_buttons_active(False)
-        # Pass Bidirectional Flag
         config = {'mode': 'Part1', 'algo': self.combo_algo.currentText(), 'bidirectional': self.check_bi.isChecked()}
         self.start_worker(config)
 
@@ -751,25 +781,51 @@ class MainWindow(QMainWindow):
             for r, c in visited: p.drawRect(c*scale, r*scale, scale, scale)
         if path and len(path) > 1:
             pen = QPen(QColor(255, 0, 255)); pen.setWidth(max(2, int(scale/2))); p.setPen(pen)
-            
             p.drawPolyline([QPoint(int(c*scale+scale/2), int(r*scale+scale/2)) for r, c in path])
         p.end(); self.scene.addPixmap(layer)
 
     def save_maze(self):
         if self.maze_image is None: return
-        f, _ = QFileDialog.getSaveFileName(self, "Save", "", "PNG (*.png)")
-        if f: QImage(self.maze_image.data, self.maze_image.shape[1], self.maze_image.shape[0], self.maze_image.shape[1], QImage.Format.Format_Grayscale8).save(f); self.log("Saved.")
+        f, _ = QFileDialog.getSaveFileName(self, "Save Maze", "", "Images (*.png *.jpg *.jpeg *.bmp)")
+        if f: 
+            QImage(self.maze_image.data, self.maze_image.shape[1], self.maze_image.shape[0], 
+                   self.maze_image.shape[1], QImage.Format.Format_Grayscale8).save(f)
+            self.log(f"Saved to {f}")
 
     def load_maze(self):
-        f, _ = QFileDialog.getOpenFileName(self, "Load", "", "Img (*.png *.jpg *.bmp)")
+        f, _ = QFileDialog.getOpenFileName(self, "Load Maze", "", "Images (*.png *.jpg *.jpeg *.bmp)")
         if f:
+            # 1. Load image (supports JPG via Qt)
             qimg = QImage(f).convertToFormat(QImage.Format.Format_Grayscale8)
             if qimg.isNull(): return
-            w, h = qimg.width(), qimg.height(); stride = qimg.bytesPerLine()
-            ptr = qimg.bits(); ptr.setsize(h*stride)
-            arr = np.frombuffer(ptr, np.uint8).reshape((h, stride))
-            self.maze_image = np.where(arr[:, :w] > 128, 255, 0).astype(np.uint8).copy()
-            self.balls = []; self.display_maze(); self.btn_run1.setEnabled(True); self.btn_run2.setEnabled(False); self.log(f"Loaded: {w}x{h}")
+            
+            # 2. Convert to Numpy
+            w, h = qimg.width(), qimg.height()
+            stride = qimg.bytesPerLine()
+            ptr = qimg.bits()
+            ptr.setsize(h * stride)
+            raw_arr = np.frombuffer(ptr, np.uint8).reshape((h, stride))
+            gray_data = raw_arr[:, :w].copy() # Copy to ensure we can modify it
+            
+            # 3. Apply Noise Reduction (If Checked and Available)
+            if self.check_noise.isChecked():
+                if OPENCV_AVAILABLE:
+                    # Median blur (Kernel 5) removes salt-and-pepper noise and softens JPEG artifacts
+                    gray_data = cv2.medianBlur(gray_data, 5)
+                    self.log("Applied Median Blur (Kernel 5).")
+                else:
+                    self.log("WARNING: OpenCV not installed. Skipping blur.")
+
+            # 4. Threshold to Binary (Wall=0, Path=255)
+            # Simple fixed threshold > 128
+            self.maze_image = np.where(gray_data > 128, 255, 0).astype(np.uint8)
+
+            # Reset state
+            self.balls = [] 
+            self.display_maze()
+            self.btn_run1.setEnabled(True)
+            self.btn_run2.setEnabled(False)
+            self.log(f"Loaded: {w}x{h}")
 
     @pyqtSlot(str)
     def log(self, m): self.log_box.append(f"> {m}")
