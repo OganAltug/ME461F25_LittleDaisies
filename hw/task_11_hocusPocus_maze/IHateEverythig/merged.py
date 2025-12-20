@@ -604,7 +604,7 @@ class SolverWorker(QThread):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Maze Runner: DOOM Edition V_FIT_VIEW")
+        self.setWindowTitle("Maze Runner: I Hate Myself Edition")
         self.resize(1300, 950)
         self.apply_styles()
         self.maze_image = None; self.balls = []; self.worker = None; self.current_scale = 1.0
