@@ -8,8 +8,8 @@ import socket
 import json
 
 # --- CONFIGURATION ---
-SSID = ""
-PASSWORD = ""
+SSID = "YOUR_WIFI_ID"
+PASSWORD = "YOUR_WIFI_PASSWORD"
 MOTOR_PINS = [0, 1, 2, 3] 
 
 # --- SHARED GLOBAL STATE ---
