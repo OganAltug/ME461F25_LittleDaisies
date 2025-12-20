@@ -1,0 +1,100 @@
+# Maze
+
+- Maze should be a square with horizontal and vertical walls only
+- Distance between walls, int other words the width of free paths should be 
+controllable with a tightness parameter
+- Maze starts at a square empty center at the region, our hypotetical
+robot will start at this place and try to solve the Maze
+- Maze may or may not contain some colored ball which will grant the 
+robot points if it passes over and collects them, these balls can only 
+be collected once
+
+Coding assignment is split into two parts
+
+Part I:
+
+1- Push of a button will generate a random maze with no balls. A box (in gui), 
+by default containing the value 1 (maximum value can be limited to 5), 
+will determine the number of exits from the maze. The generated maze 
+can be saved as PNG or JPG, as well as PNG and JPG mazed can also be 
+loaded. Our generated mazes will be given to other groups with their own
+code and also their mazes generated with their code will be given to us.
+
+2- One part of your GUI should enable the user to select one of the 
+following search methods: [Breadth First, Depth First, Uniform Cost, 
+Best First (i.e. Greedy), A*] 
+
+3- There should also be a checkbox that is by default NOT selected. 
+This checkbox will enable bidirectional search using the search method 
+selected from the menu given in step 2.
+
+4- Once maze is generated and search method along with all options set, 
+pressing a button will execute a search process. The resulting path from 
+center to one of the exists will be drawn with a purple pen on the maze. 
+All intermediate steps should also be drawn with a yellow pen as well.
+
+Uninformed search methods should work fine with just an image input, 
+however I am confused how will informed methods suppose to work. Is a prioer
+uninformed search required to execute informed methods, let's discuss.
+
+Part II:
+
+1- Push of a button will generate a random maze with N balls having one 
+of the preset colors (RED = [255, 0, 0], GREEN = [0, 255, 0], BLUE= [0, 0, 255] 
+will be randomly placed on the maze, in the middle of maze hallways. 
+N is a random number between [Nmin - Nmaz] where these 2 values can 
+be set on your GUI. Another box, by defaulting to the value 1 (maximum 
+value can be limited to 5), determines the number of exits from the maze. 
+The generated maze can be saved as PNG or JPG, as well as PNG and JPG mazed 
+can also be loaded. Our generated mazes will be given to other groups with their own
+code and also their mazes generated with their code will be given to us.
+
+2- There should be 3 boxes that correspond to the bonus values that belong t
+o RGB colors, where they should default to R = 1, G = 2, B = 3.
+
+3- There should also be a text box, in which by default 'inf' is written. Here 
+'inf' implies infinite, alternatively, you will enter some positive numbers 
+into this box which will limit the length of solution.
+
+4- Once maze is generated and search method along with all options set, 
+pressing a button will execute a search process by calling a single function 
+prototyped as follows:
+
+def searchLikeThereIsNoTomorrow(MazeImage, RGBValues = [1,2,3], SolutionLength = 'inf'):
+    # Your Implementation here
+    return ResImage, SolutionList, VisitedList
+
+As seen, the function will get the image as a numpy array, or path to an image file, 
+bonus values for RGB colors, and solution length. Note that as explained below, 
+solution length is pixel-wise length of the solution path encoded in SolutionList.
+
+ResImage should overlay the solution path from center to one of the exists that 
+is drawn with a purple pen on the maze image. Intermediate steps should be drawn 
+with a yellow pen as well. SolutionList is a list containing sorted pixel 
+coordinates on the image such as [ [x0, y0], [x1, y1], ... [xn, yn]] where 
+the path from point 0 to point n is your proposed solution. Pixel-wise 
+neighbourhood is not expected in this list, all it takes is that a straight 
+line from one point to the next in the list does not hit a wall. 
+
+VisitedList similarly is the list of all visited pixels on the maze yet, points 
+in this list does not necessarily have to be consecutive given that nature of 
+visited nodes is not a single path. 
+
+Note that this list may be way shorter than the length of the actual solution path. 
+Length of the solution path can be calculated using 8-neighbors, or using the sum of 
+euclidian distances between consecutive points in the SolutionList.
+
+If solution length is 'inf' your function returns a solution with maximum points 
+among possible feasible solutions.
+
+If solution length is limited, then your function returns the solution with 
+maximum points that is equal to or shorter than given path length. 
+
+Algorithm to be used is your choice, i.e. one of [Breadth First, Depth First, 
+Uniform Cost, Best First (i.e. Greedy), A*] that might be combined with bidirectional search if needed.
+
+Let's also discuss what methods to use for this function, or a combination of methods. This function should 
+be as fast possible, while providing completely accurate results.
+
+Let's start discussing part 1, we will discuss part 2 later. No need to write code for now, but you can provide
+little example snippets if you want to. 
