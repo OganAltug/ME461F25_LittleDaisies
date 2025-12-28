@@ -128,14 +128,13 @@ class MazeSolver:
             if 0 <= nr < self.rows and 0 <= nc < self.cols and self.image[nr, nc] == PATH_COLOR:
                 yield (nr, nc)
 
-    # --- PART 1 ENTRY POINT ---
+    # --- PART 1 ---
     def solve_part1(self, method, bidirectional=False):
         if bidirectional:
             return self._solve_bidirectional(method)
         else:
             return self._solve_unidirectional(method)
 
-    # --- UNIDIRECTIONAL (Classic) ---
     def _solve_unidirectional(self, method):
         start = self.start_node
         queue, stack, pq = deque(), [], []
@@ -150,8 +149,6 @@ class MazeSolver:
         visited_set = set()
         
         steps = 0; tie = 0
-        
-        # Heuristic for A* / Greedy
         def h(node):
             if not self.exits: return 0
             return min([math.hypot(node[0]-er, node[1]-ec) for er, ec in self.exits])
@@ -173,7 +170,6 @@ class MazeSolver:
 
             for nxt in self._get_neighbors(curr):
                 new_cost = cost_so_far.get(curr, 0) + 1
-                
                 if method in ["BFS", "DFS"]:
                     if nxt not in came_from:
                         came_from[nxt] = curr
@@ -190,34 +186,25 @@ class MazeSolver:
                         heapq.heappush(pq, (prio, tie, nxt))
         return [], visited_order
 
-    # --- BIDIRECTIONAL (New!) ---
     def _solve_bidirectional(self, method):
-        # Forward Search (Start -> Out)
         f_start = self.start_node
         f_queue, f_stack, f_pq = deque(), [], []
-        
-        # Backward Search (Exits -> In) - Initialize with ALL exits
         b_starts = self.exits
         b_queue, b_stack, b_pq = deque(), [], []
         
-        # Initialize Frontiers
         if method == "BFS":
             f_queue.append(f_start); b_queue.extend(b_starts)
         elif method == "DFS":
             f_stack.append(f_start); b_stack.extend(b_starts)
-        else: # A*, Greedy, UCS
+        else:
             heapq.heappush(f_pq, (0, 0, f_start))
             for i, ex in enumerate(b_starts): heapq.heappush(b_pq, (0, i, ex))
 
         f_came_from = {f_start: None}; b_came_from = {ex: None for ex in b_starts}
         f_cost = {f_start: 0}; b_cost = {ex: 0 for ex in b_starts}
-        
-        visited_order = []
-        f_visited = set(); b_visited = set()
-        
+        visited_order = []; f_visited = set(); b_visited = set()
         steps = 0; f_tie = 0; b_tie = 0
         
-        # Heuristics
         def f_h(node): 
             if not self.exits: return 0
             return min([math.hypot(node[0]-er, node[1]-ec) for er, ec in self.exits])
@@ -228,7 +215,7 @@ class MazeSolver:
             if steps % 500 == 0 and self.check_abort(): return None, None
             steps += 1
 
-            # --- EXPAND FORWARD ---
+            # Forward
             curr_f = None
             if f_queue: curr_f = f_queue.popleft()
             elif f_stack: curr_f = f_stack.pop()
@@ -238,7 +225,6 @@ class MazeSolver:
                 if curr_f in b_came_from: return self._reconstruct_bi(curr_f, f_came_from, b_came_from), visited_order
                 if curr_f not in f_visited:
                     f_visited.add(curr_f); visited_order.append(curr_f)
-                    
                     for nxt in self._get_neighbors(curr_f):
                         new_c = f_cost.get(curr_f, 0) + 1
                         if method in ["BFS", "DFS"]:
@@ -254,7 +240,7 @@ class MazeSolver:
                                 elif method == "A*": prio += f_h(nxt)
                                 f_tie += 1; heapq.heappush(f_pq, (prio, f_tie, nxt))
 
-            # --- EXPAND BACKWARD ---
+            # Backward
             curr_b = None
             if b_queue: curr_b = b_queue.popleft()
             elif b_stack: curr_b = b_stack.pop()
@@ -264,7 +250,6 @@ class MazeSolver:
                 if curr_b in f_came_from: return self._reconstruct_bi(curr_b, f_came_from, b_came_from), visited_order
                 if curr_b not in b_visited:
                     b_visited.add(curr_b); visited_order.append(curr_b)
-                    
                     for nxt in self._get_neighbors(curr_b):
                         new_c = b_cost.get(curr_b, 0) + 1
                         if method in ["BFS", "DFS"]:
@@ -279,7 +264,6 @@ class MazeSolver:
                                 if method == "Greedy": prio = b_h(nxt)
                                 elif method == "A*": prio += b_h(nxt)
                                 b_tie += 1; heapq.heappush(b_pq, (prio, b_tie, nxt))
-        
         return [], visited_order
 
     def _reconstruct(self, curr, came_from):
@@ -289,103 +273,164 @@ class MazeSolver:
         return path
 
     def _reconstruct_bi(self, meet_node, f_came, b_came):
-        # Path from Start -> Meet
         path_start = []
         curr = meet_node
         while curr: path_start.append(curr); curr = f_came[curr]
         path_start.reverse()
-        
-        # Path from Meet -> Exit
         path_end = []
-        curr = b_came[meet_node] # Start from parent of meet
+        curr = b_came[meet_node] 
         while curr: path_end.append(curr); curr = b_came[curr]
-        
         return path_start + path_end
 
-    # --- PART 2 ---
+    # --- PART 2: CONSTRAINED TSP ---
     def solve_part2(self, balls, rgb_scores, limit_str):
-        # (Same as previous logic for Part 2)
         try: limit = float(limit_str)
         except: limit = float('inf')
+        
+        # 1. Identify POIs
         pois = [{'id': -1, 'loc': self.start_node, 'type': 'start', 'score': 0}]
         score_map = {0: rgb_scores[0], 1: rgb_scores[1], 2: rgb_scores[2]}
-        for i, b in enumerate(balls): pois.append({'id': i, 'loc': b['loc'], 'type': 'ball', 'score': score_map[b['color']]})
-        for i, ex in enumerate(self.exits): pois.append({'id': 1000+i, 'loc': ex, 'type': 'exit', 'score': 0})
+        for i, b in enumerate(balls): 
+            pois.append({'id': i, 'loc': b['loc'], 'type': 'ball', 'score': score_map[b['color']]})
+        for i, ex in enumerate(self.exits): 
+            pois.append({'id': 1000+i, 'loc': ex, 'type': 'exit', 'score': 0})
         
+        # 2. Build Adjacency Matrix (Graph) with PATHS
         adj = {}; sources = [p for p in pois if p['type'] in ['start', 'ball']]
         targets = [p['loc'] for p in pois]; visited_all = set()
         
         for src in sources:
             if self.check_abort(): return [], []
             dists, paths, v_set = self._dijkstra_scan(src['loc'], targets)
-            visited_all.update(v_set); adj[src['id']] = {}
+            visited_all.update(v_set)
+            adj[src['id']] = {}
             for t in pois:
-                if t['loc'] in dists: adj[src['id']][t['id']] = (dists[t['loc']], paths[t['loc']])
+                if t['loc'] in dists and t['id'] != src['id']:
+                    # Store (distance, list_of_pixels)
+                    adj[src['id']][t['id']] = (dists[t['loc']], paths[t['loc']])
         
+        # 3. Solve TSP with Unique Pixel Constraint
         best_path_ids = self._solve_tsp_dfs(pois, adj, limit)
+        
+        # 4. Reconstruct
         full_path = []
         if best_path_ids:
             for i in range(len(best_path_ids)-1):
-                _, seg = adj[best_path_ids[i]][best_path_ids[i+1]]
-                full_path.extend(seg[1:] if full_path else seg)
+                u, v = best_path_ids[i], best_path_ids[i+1]
+                if u in adj and v in adj[u]:
+                    _, seg = adj[u][v]
+                    # Don't duplicate the join point
+                    full_path.extend(seg[1:] if full_path else seg)
+                    
         return full_path, list(visited_all)
 
     def _dijkstra_scan(self, start, targets):
-        t_set = set(targets); pq = [(0, start)]; dists = {start:0}; parents = {start:None}; vis = set()
+        t_set = set(targets); pq = [(0, start)]
+        dists = {start:0}; parents = {start:None}; vis = set()
+        
         while pq:
             c, curr = heapq.heappop(pq)
             if curr in vis: continue
             vis.add(curr)
-            for (dr, dc), move in [((-1,0),1),((1,0),1),((0,-1),1),((0,1),1),((-1,-1),1.414),((-1,1),1.414),((1,-1),1.414),((1,1),1.414)]:
+            
+            # 8-direction movement
+            moves = [((-1,0),1),((1,0),1),((0,-1),1),((0,1),1),
+                     ((-1,-1),1.414),((-1,1),1.414),((1,-1),1.414),((1,1),1.414)]
+                     
+            for (dr, dc), move in moves:
                 nr, nc = curr[0]+dr, curr[1]+dc
                 if 0<=nr<self.rows and 0<=nc<self.cols and self.image[nr,nc]==PATH_COLOR:
-                    ncost = c+move
+                    ncost = c + move
                     if (nr,nc) not in dists or ncost < dists[(nr,nc)]:
-                        dists[(nr,nc)]=ncost; parents[(nr,nc)]=curr; heapq.heappush(pq,(ncost,(nr,nc)))
+                        dists[(nr,nc)]=ncost; parents[(nr,nc)]=curr
+                        heapq.heappush(pq, (ncost,(nr,nc)))
+                        
         paths = {}
         for t in t_set:
             if t in dists:
                 p=[]; curr=t
                 while curr: p.append(curr); curr=parents[curr]
-                p.reverse(); paths[t]=p
+                p.reverse()
+                paths[t] = p
         return dists, paths, vis
 
     def _solve_tsp_dfs(self, pois, adj, limit):
-        start=-1; balls=[p['id'] for p in pois if p['type']=='ball']; exits=[p['id'] for p in pois if p['type']=='exit']
-        scores={p['id']:p['score'] for p in pois}
-        stack=[(start, set(), 0.0, 0, [start])]
-        best_score=-1; best_path=[]
+        start_id = -1
+        balls = [p['id'] for p in pois if p['type']=='ball']
+        exits = [p['id'] for p in pois if p['type']=='exit']
+        scores = {p['id']: p['score'] for p in pois}
+        
+        # Stack: (current_id, visited_poi_set, current_dist, current_score, path_ids, visited_pixels_set)
+        # Note: visited_pixels_set tracks global pixel usage to prevent self-intersection
+        stack = [(start_id, {start_id}, 0.0, 0, [start_id], set())]
+        
+        best_score = -1
+        best_path = []
         
         while stack:
-            curr, vis, dist, score, path = stack.pop()
+            curr, vis_pois, dist, score, path, vis_pixels = stack.pop()
+            
+            # Try to Exit
             for ex in exits:
                 if ex in adj[curr]:
-                    d_ex, _ = adj[curr][ex]; tot_d = dist+d_ex
+                    d_ex, p_pixels = adj[curr][ex]
+                    
+                    # Check Pixel Collision (excluding start point which is 'curr')
+                    segment_pixels = set(p_pixels[1:])
+                    if not segment_pixels.isdisjoint(vis_pixels):
+                        continue # Path blocked by own tail
+                        
+                    tot_d = dist + d_ex
                     if tot_d <= limit:
-                        if score > best_score: best_score=score; best_path=path+[ex]
-            
+                        if score > best_score:
+                            best_score = score
+                            best_path = path + [ex]
+                        elif score == best_score:
+                            # Prefer shorter path for same score
+                            # (Optional: calculate length)
+                            pass
+
+            # Try to go to unvisited Balls
+            # Sort candidates by distance (heuristic)
             cands = []
             for b in balls:
-                if b not in vis and b in adj[curr]: cands.append((b, adj[curr][b][0]))
-            cands.sort(key=lambda x: x[1])
+                if b not in vis_pois and b in adj[curr]:
+                    d_ball, p_pixels = adj[curr][b]
+                    cands.append((b, d_ball, p_pixels))
             
-            for b, d_ball in cands:
-                if dist+d_ball > limit: continue
-                d_any_ex = min([adj[b][e][0] for e in exits if e in adj[b]], default=float('inf'))
-                if dist+d_ball+d_any_ex <= limit:
-                    nv = vis.copy(); nv.add(b)
-                    stack.append((b, nv, dist+d_ball, score+scores[b], path+[b]))
+            cands.sort(key=lambda x: x[1], reverse=True) # Sort reverse because stack is LIFO
+            
+            for b, d_ball, p_pixels in cands:
+                if dist + d_ball > limit: continue
+                
+                # 1. Check if exit is reachable from ball (heuristic pruning)
+                d_any_ex = float('inf')
+                for e in exits:
+                    if e in adj[b]: d_any_ex = min(d_any_ex, adj[b][e][0])
+                if dist + d_ball + d_any_ex > limit: continue
+                
+                # 2. STRICT PIXEL CONSTRAINT
+                segment_pixels = set(p_pixels[1:])
+                if not segment_pixels.isdisjoint(vis_pixels):
+                    continue # This path crosses a previous path
+                
+                # 3. Add to stack
+                nv_pois = vis_pois.copy(); nv_pois.add(b)
+                nv_pixels = vis_pixels.union(segment_pixels)
+                
+                stack.append((b, nv_pois, dist+d_ball, score+scores[b], path+[b], nv_pixels))
+                
         return best_path
 
 
 def searchLikeThereIsNoTomorrow(MazeImage, RGBValues=[1, 2, 3], SolutionLength='inf'):
     """
-    A self-contained solver for the Maze Orienteering problem.
+    Standalone solver for Part 2 with strict pixel constraints (no overlap/backtracking).
     """
     import math
     from collections import deque
     
-    # --- 1. INPUT HANDLING ---
+    # --- 1. Load Image ---
     original_img = None
     if isinstance(MazeImage, str):
         try:
@@ -404,27 +449,31 @@ def searchLikeThereIsNoTomorrow(MazeImage, RGBValues=[1, 2, 3], SolutionLength='
     exits = []
     balls = [] 
     
-    def is_color(pixel, target):
-        return np.array_equal(pixel[:3], target)
+    # Helper: Color distance for robust detection
+    def color_dist(c1, c2):
+        return np.linalg.norm(np.array(c1[:3]) - np.array(c2))
 
     ball_id_counter = 0
     
+    # --- 2. Scan Pixels ---
     for r in range(rows):
         for c in range(cols):
             px = original_img[r, c]
+            # Detect Exits (Whiteish on edges)
             if (r == 0 or r == rows-1 or c == 0 or c == cols-1):
-                if np.mean(px) > 128:
+                if np.mean(px) > 100:
                     exits.append((r, c))
                 continue
 
-            if is_color(px, [255, 0, 0]):
-                balls.append({'id': ball_id_counter, 'loc': (r, c), 'score': RGBValues[0]})
+            # Detect Balls (RGB)
+            if color_dist(px, [255, 0, 0]) < 50:
+                balls.append({'id': ball_id_counter, 'loc': (r, c), 'score': RGBValues[0], 'color': [255,0,0]})
                 ball_id_counter += 1
-            elif is_color(px, [0, 255, 0]):
-                balls.append({'id': ball_id_counter, 'loc': (r, c), 'score': RGBValues[1]})
+            elif color_dist(px, [0, 255, 0]) < 50:
+                balls.append({'id': ball_id_counter, 'loc': (r, c), 'score': RGBValues[1], 'color': [0,255,0]})
                 ball_id_counter += 1
-            elif is_color(px, [0, 0, 255]):
-                balls.append({'id': ball_id_counter, 'loc': (r, c), 'score': RGBValues[2]})
+            elif color_dist(px, [0, 0, 255]) < 50:
+                balls.append({'id': ball_id_counter, 'loc': (r, c), 'score': RGBValues[2], 'color': [0,0,255]})
                 ball_id_counter += 1
 
     pois = [{'id': -1, 'loc': start_node, 'type': 'start', 'score': 0}]
@@ -434,26 +483,28 @@ def searchLikeThereIsNoTomorrow(MazeImage, RGBValues=[1, 2, 3], SolutionLength='
     for i, ex in enumerate(exits):
         pois.append({'id': 1000 + i, 'loc': ex, 'type': 'exit', 'score': 0})
 
+    # --- 3. Dijkstra Helper (Returns full path pixels) ---
     def run_dijkstra(src_loc, target_locs):
         targets_set = set(target_locs)
         pq = [(0, src_loc)] 
         dists = {src_loc: 0}
         parents = {src_loc: None}
         visited_set = set()
-        targets_found = 0
         
         while pq:
             cost, curr = heapq.heappop(pq)
             if curr in visited_set: continue
             visited_set.add(curr)
-            if curr in targets_set: targets_found += 1
+            
             r, c = curr
             moves = [((-1,0), 1), ((1,0), 1), ((0,-1), 1), ((0,1), 1),
                      ((-1,-1), 1.414), ((-1,1), 1.414), ((1,-1), 1.414), ((1,1), 1.414)]
+            
             for (dr, dc), move_cost in moves:
                 nr, nc = r + dr, c + dc
                 if 0 <= nr < rows and 0 <= nc < cols:
                     pixel_val = original_img[nr, nc]
+                    # Path is not black
                     if np.mean(pixel_val) > 20: 
                         new_cost = cost + move_cost
                         if (nr, nc) not in dists or new_cost < dists[(nr, nc)]:
@@ -474,6 +525,7 @@ def searchLikeThereIsNoTomorrow(MazeImage, RGBValues=[1, 2, 3], SolutionLength='
                 found_paths[t] = p
         return found_dists, found_paths, visited_set
 
+    # --- 4. Build Graph ---
     sources = [p for p in pois if p['type'] in ['start', 'ball']]
     all_locs = [p['loc'] for p in pois]
     adj = {}; all_visited_pixels = set()
@@ -494,23 +546,36 @@ def searchLikeThereIsNoTomorrow(MazeImage, RGBValues=[1, 2, 3], SolutionLength='
     exit_ids = [p['id'] for p in pois if p['type'] == 'exit']
     id_map = {p['id']: p for p in pois}
     
-    stack = [(start_id, set(), 0.0, 0, [start_id])]
-    best_score = -1; best_path_ids = []; min_dist_for_best = float('inf')
+    # --- 5. DFS with Pixel Collision Check ---
+    # Stack: (curr_id, visited_poi_ids, dist, score, path_ids, global_visited_pixels_set)
+    stack = [(start_id, {start_id}, 0.0, 0, [start_id], set())]
     
+    best_score = -1
+    best_path_ids = []
+    min_dist_for_best = float('inf')
+    
+    # Pre-calc min exit distance for pruning
     min_exit_dists = {}
     for pid in [start_id] + ball_ids:
         if pid in adj:
             d = float('inf')
             for eid in exit_ids:
-                if eid in adj[pid]:
-                    d = min(d, adj[pid][eid][0])
+                if eid in adj[pid]: d = min(d, adj[pid][eid][0])
             min_exit_dists[pid] = d
 
     while stack:
-        curr, vis, dist, score, path = stack.pop()
+        curr, vis, dist, score, path, vis_pixels = stack.pop()
+        
+        # Check Exits
         for eid in exit_ids:
             if eid in adj[curr]:
-                d_exit, _ = adj[curr][eid]
+                d_exit, p_pixels = adj[curr][eid]
+                
+                # Constraint: No overlapping pixels
+                seg_pix = set(p_pixels[1:])
+                if not seg_pix.isdisjoint(vis_pixels):
+                    continue
+
                 total_d = dist + d_exit
                 if total_d <= limit_val:
                     if score > best_score:
@@ -519,21 +584,34 @@ def searchLikeThereIsNoTomorrow(MazeImage, RGBValues=[1, 2, 3], SolutionLength='
                         if total_d < min_dist_for_best:
                             min_dist_for_best = total_d; best_path_ids = path + [eid]
         
+        # Check Balls
         candidates = []
         for bid in ball_ids:
             if bid not in vis and bid in adj[curr]:
-                d_ball, _ = adj[curr][bid]
-                candidates.append((bid, d_ball))
-        candidates.sort(key=lambda x: x[1])
+                d_ball, p_pixels = adj[curr][bid]
+                candidates.append((bid, d_ball, p_pixels))
+        
+        # Sort so we process closer balls last (LIFO stack means we process closest first)
+        candidates.sort(key=lambda x: x[1], reverse=True)
 
-        for bid, d_ball in candidates:
+        for bid, d_ball, p_pixels in candidates:
             if dist + d_ball > limit_val: continue
+            
             d_escape = min_exit_dists.get(bid, float('inf'))
-            if dist + d_ball + d_escape <= limit_val:
-                new_vis = vis.copy(); new_vis.add(bid)
-                new_score = score + id_map[bid]['score']
-                stack.append((bid, new_vis, dist + d_ball, new_score, path + [bid]))
+            if dist + d_ball + d_escape > limit_val: continue
+            
+            # Constraint: No overlapping pixels
+            seg_pix = set(p_pixels[1:])
+            if not seg_pix.isdisjoint(vis_pixels):
+                continue
+            
+            new_vis = vis.copy(); new_vis.add(bid)
+            new_pix = vis_pixels.union(seg_pix)
+            new_score = score + id_map[bid]['score']
+            
+            stack.append((bid, new_vis, dist + d_ball, new_score, path + [bid], new_pix))
 
+    # --- 6. Draw Solution ---
     solution_list = []
     if best_path_ids:
         solution_list.append(list(id_map[best_path_ids[0]]['loc']))
@@ -543,11 +621,39 @@ def searchLikeThereIsNoTomorrow(MazeImage, RGBValues=[1, 2, 3], SolutionLength='
                 _, pixels = adj[u][v]
                 for px in pixels[1:]: solution_list.append(list(px))
     
+    # Draw Visited (Yellow)
     visited_list = [list(loc) for loc in all_visited_pixels]
     for r, c in visited_list:
         if np.mean(res_image[r,c]) > 20: res_image[r, c] = [255, 255, 0]
+    
+    # Draw Path (Purple)
     purple = [255, 0, 255] 
-    for r, c in solution_list: res_image[r, c] = purple
+    for r, c in solution_list: 
+        res_image[r, c] = purple
+
+    # --- 7. Draw Balls and Exits (Ensuring Visibility) ---
+    # Draw balls (Big Circles)
+    for b in balls:
+        br, bc = b['loc']
+        color = b['color']
+        # Simple circle drawing
+        rad = 3
+        for r_off in range(-rad, rad+1):
+            for c_off in range(-rad, rad+1):
+                if r_off**2 + c_off**2 <= rad**2:
+                    nr, nc = br+r_off, bc+c_off
+                    if 0 <= nr < rows and 0 <= nc < cols:
+                        res_image[nr, nc] = color
+    
+    # Draw Exits (White Blocks)
+    for ex in exits:
+        er, ec = ex
+        rad = 2
+        for r_off in range(-rad, rad+1):
+            for c_off in range(-rad, rad+1):
+                nr, nc = er+r_off, ec+c_off
+                if 0 <= nr < rows and 0 <= nc < cols:
+                    res_image[nr, nc] = [255, 255, 255]
 
     return res_image, solution_list, visited_list
 
