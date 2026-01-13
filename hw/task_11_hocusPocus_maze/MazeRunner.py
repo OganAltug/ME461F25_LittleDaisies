@@ -689,7 +689,7 @@ class MainWindow(QMainWindow):
         
         # 1. Draw Visited Nodes (Yellow Transparency)
         if visited:
-            p.setBrush(QColor(255, 255, 0, 100)) # Yellow transparent
+            p.setBrush(QColor(0, 0, 255, 100)) # Yellow transparent
             p.setPen(Qt.PenStyle.NoPen)
             for r, c in visited:
                 p.drawRect(int(c*scale), int(r*scale), int(max(1, scale)), int(max(1, scale)))
