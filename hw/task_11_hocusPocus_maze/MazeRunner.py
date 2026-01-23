@@ -7,7 +7,7 @@ import time
 import multiprocessing
 from collections import deque
 
-# Try to import OpenCV for noise reduction
+# Try to import OpenCV for clustering/noise reduction
 try:
     import cv2
     OPENCV_AVAILABLE = True
@@ -18,7 +18,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHBoxLayout, QPushButton, QLabel, QComboBox, 
                              QSpinBox, QTextEdit, QGraphicsView, QGraphicsScene, 
                              QGroupBox, QFileDialog, QLineEdit, QCheckBox)
-from PyQt6.QtCore import Qt, pyqtSlot, QThread, pyqtSignal, QPoint, QRectF
+from PyQt6.QtCore import Qt, pyqtSlot, QThread, pyqtSignal, QPoint
 from PyQt6.QtGui import QImage, QPixmap, QPainter, QPen, QColor, QBrush
 
 # ==========================================
@@ -387,7 +387,6 @@ class MazeSolver:
                             best_path = path + [ex]
                         elif score == best_score:
                             # Prefer shorter path for same score
-                            # (Optional: calculate length)
                             pass
 
             # Try to go to unvisited Balls
@@ -422,240 +421,6 @@ class MazeSolver:
                 
         return best_path
 
-
-def searchLikeThereIsNoTomorrow(MazeImage, RGBValues=[1, 2, 3], SolutionLength='inf'):
-    """
-    Standalone solver for Part 2 with strict pixel constraints (no overlap/backtracking).
-    """
-    import math
-    from collections import deque
-    
-    # --- 1. Load Image ---
-    original_img = None
-    if isinstance(MazeImage, str):
-        try:
-            import cv2
-            original_img = cv2.cvtColor(cv2.imread(MazeImage), cv2.COLOR_BGR2RGB)
-        except:
-            from PIL import Image
-            original_img = np.array(Image.open(MazeImage))
-    else:
-        original_img = MazeImage.copy()
-
-    res_image = original_img.copy()
-    rows, cols, _ = original_img.shape
-
-    start_node = (rows // 2, cols // 2)
-    exits = []
-    balls = [] 
-    
-    # Helper: Color distance for robust detection
-    def color_dist(c1, c2):
-        return np.linalg.norm(np.array(c1[:3]) - np.array(c2))
-
-    ball_id_counter = 0
-    
-    # --- 2. Scan Pixels ---
-    for r in range(rows):
-        for c in range(cols):
-            px = original_img[r, c]
-            # Detect Exits (Whiteish on edges)
-            if (r == 0 or r == rows-1 or c == 0 or c == cols-1):
-                if np.mean(px) > 100:
-                    exits.append((r, c))
-                continue
-
-            # Detect Balls (RGB)
-            if color_dist(px, [255, 0, 0]) < 50:
-                balls.append({'id': ball_id_counter, 'loc': (r, c), 'score': RGBValues[0], 'color': [255,0,0]})
-                ball_id_counter += 1
-            elif color_dist(px, [0, 255, 0]) < 50:
-                balls.append({'id': ball_id_counter, 'loc': (r, c), 'score': RGBValues[1], 'color': [0,255,0]})
-                ball_id_counter += 1
-            elif color_dist(px, [0, 0, 255]) < 50:
-                balls.append({'id': ball_id_counter, 'loc': (r, c), 'score': RGBValues[2], 'color': [0,0,255]})
-                ball_id_counter += 1
-
-    pois = [{'id': -1, 'loc': start_node, 'type': 'start', 'score': 0}]
-    for b in balls:
-        b['type'] = 'ball'
-        pois.append(b)
-    for i, ex in enumerate(exits):
-        pois.append({'id': 1000 + i, 'loc': ex, 'type': 'exit', 'score': 0})
-
-    # --- 3. Dijkstra Helper (Returns full path pixels) ---
-    def run_dijkstra(src_loc, target_locs):
-        targets_set = set(target_locs)
-        pq = [(0, src_loc)] 
-        dists = {src_loc: 0}
-        parents = {src_loc: None}
-        visited_set = set()
-        
-        while pq:
-            cost, curr = heapq.heappop(pq)
-            if curr in visited_set: continue
-            visited_set.add(curr)
-            
-            r, c = curr
-            moves = [((-1,0), 1), ((1,0), 1), ((0,-1), 1), ((0,1), 1),
-                     ((-1,-1), 1.414), ((-1,1), 1.414), ((1,-1), 1.414), ((1,1), 1.414)]
-            
-            for (dr, dc), move_cost in moves:
-                nr, nc = r + dr, c + dc
-                if 0 <= nr < rows and 0 <= nc < cols:
-                    pixel_val = original_img[nr, nc]
-                    # Path is not black
-                    if np.mean(pixel_val) > 20: 
-                        new_cost = cost + move_cost
-                        if (nr, nc) not in dists or new_cost < dists[(nr, nc)]:
-                            dists[(nr, nc)] = new_cost
-                            parents[(nr, nc)] = curr
-                            heapq.heappush(pq, (new_cost, (nr, nc)))
-        
-        found_paths = {}
-        found_dists = {}
-        for t in targets_set:
-            if t in dists:
-                found_dists[t] = dists[t]
-                p = []
-                curr = t
-                while curr:
-                    p.append(curr); curr = parents[curr]
-                p.reverse()
-                found_paths[t] = p
-        return found_dists, found_paths, visited_set
-
-    # --- 4. Build Graph ---
-    sources = [p for p in pois if p['type'] in ['start', 'ball']]
-    all_locs = [p['loc'] for p in pois]
-    adj = {}; all_visited_pixels = set()
-    
-    for src in sources:
-        dists, paths, v_set = run_dijkstra(src['loc'], all_locs)
-        all_visited_pixels.update(v_set)
-        adj[src['id']] = {}
-        for dest in pois:
-            if dest['loc'] in dists and dest['id'] != src['id']:
-                adj[src['id']][dest['id']] = (dists[dest['loc']], paths[dest['loc']])
-
-    try: limit_val = float(SolutionLength)
-    except: limit_val = float('inf')
-
-    start_id = -1
-    ball_ids = [p['id'] for p in pois if p['type'] == 'ball']
-    exit_ids = [p['id'] for p in pois if p['type'] == 'exit']
-    id_map = {p['id']: p for p in pois}
-    
-    # --- 5. DFS with Pixel Collision Check ---
-    # Stack: (curr_id, visited_poi_ids, dist, score, path_ids, global_visited_pixels_set)
-    stack = [(start_id, {start_id}, 0.0, 0, [start_id], set())]
-    
-    best_score = -1
-    best_path_ids = []
-    min_dist_for_best = float('inf')
-    
-    # Pre-calc min exit distance for pruning
-    min_exit_dists = {}
-    for pid in [start_id] + ball_ids:
-        if pid in adj:
-            d = float('inf')
-            for eid in exit_ids:
-                if eid in adj[pid]: d = min(d, adj[pid][eid][0])
-            min_exit_dists[pid] = d
-
-    while stack:
-        curr, vis, dist, score, path, vis_pixels = stack.pop()
-        
-        # Check Exits
-        for eid in exit_ids:
-            if eid in adj[curr]:
-                d_exit, p_pixels = adj[curr][eid]
-                
-                # Constraint: No overlapping pixels
-                seg_pix = set(p_pixels[1:])
-                if not seg_pix.isdisjoint(vis_pixels):
-                    continue
-
-                total_d = dist + d_exit
-                if total_d <= limit_val:
-                    if score > best_score:
-                        best_score = score; best_path_ids = path + [eid]; min_dist_for_best = total_d
-                    elif score == best_score:
-                        if total_d < min_dist_for_best:
-                            min_dist_for_best = total_d; best_path_ids = path + [eid]
-        
-        # Check Balls
-        candidates = []
-        for bid in ball_ids:
-            if bid not in vis and bid in adj[curr]:
-                d_ball, p_pixels = adj[curr][bid]
-                candidates.append((bid, d_ball, p_pixels))
-        
-        # Sort so we process closer balls last (LIFO stack means we process closest first)
-        candidates.sort(key=lambda x: x[1], reverse=True)
-
-        for bid, d_ball, p_pixels in candidates:
-            if dist + d_ball > limit_val: continue
-            
-            d_escape = min_exit_dists.get(bid, float('inf'))
-            if dist + d_ball + d_escape > limit_val: continue
-            
-            # Constraint: No overlapping pixels
-            seg_pix = set(p_pixels[1:])
-            if not seg_pix.isdisjoint(vis_pixels):
-                continue
-            
-            new_vis = vis.copy(); new_vis.add(bid)
-            new_pix = vis_pixels.union(seg_pix)
-            new_score = score + id_map[bid]['score']
-            
-            stack.append((bid, new_vis, dist + d_ball, new_score, path + [bid], new_pix))
-
-    # --- 6. Draw Solution ---
-    solution_list = []
-    if best_path_ids:
-        solution_list.append(list(id_map[best_path_ids[0]]['loc']))
-        for i in range(len(best_path_ids) - 1):
-            u, v = best_path_ids[i], best_path_ids[i+1]
-            if u in adj and v in adj[u]:
-                _, pixels = adj[u][v]
-                for px in pixels[1:]: solution_list.append(list(px))
-    
-    # Draw Visited (Yellow)
-    visited_list = [list(loc) for loc in all_visited_pixels]
-    for r, c in visited_list:
-        if np.mean(res_image[r,c]) > 20: res_image[r, c] = [255, 255, 0]
-    
-    # Draw Path (Purple)
-    purple = [255, 0, 255] 
-    for r, c in solution_list: 
-        res_image[r, c] = purple
-
-    # --- 7. Draw Balls and Exits (Ensuring Visibility) ---
-    # Draw balls (Big Circles)
-    for b in balls:
-        br, bc = b['loc']
-        color = b['color']
-        # Simple circle drawing
-        rad = 3
-        for r_off in range(-rad, rad+1):
-            for c_off in range(-rad, rad+1):
-                if r_off**2 + c_off**2 <= rad**2:
-                    nr, nc = br+r_off, bc+c_off
-                    if 0 <= nr < rows and 0 <= nc < cols:
-                        res_image[nr, nc] = color
-    
-    # Draw Exits (White Blocks)
-    for ex in exits:
-        er, ec = ex
-        rad = 2
-        for r_off in range(-rad, rad+1):
-            for c_off in range(-rad, rad+1):
-                nr, nc = er+r_off, ec+c_off
-                if 0 <= nr < rows and 0 <= nc < cols:
-                    res_image[nr, nc] = [255, 255, 255]
-
-    return res_image, solution_list, visited_list
 
 # ==========================================
 # PART 2: WORKER THREAD
@@ -710,10 +475,17 @@ class SolverWorker(QThread):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Maze Runner: I Hate Myself Edition")
+        self.setWindowTitle("Maze Runner: Visual Fix Edition")
         self.resize(1300, 950)
         self.apply_styles()
-        self.maze_image = None; self.balls = []; self.worker = None; self.current_scale = 1.0
+        
+        # State Data
+        self.maze_image = None  # Binary (0/255) for logic
+        self.loaded_pixmap = None # Original visual for display
+        self.balls = [] 
+        self.worker = None
+        self.current_scale = 1.0
+        
         central = QWidget(); self.setCentralWidget(central); self.layout_main = QHBoxLayout(central)
         self.setup_controls(); self.setup_view(); self.setup_info()
 
@@ -815,7 +587,7 @@ class MainWindow(QMainWindow):
 
     def setup_info(self):
         panel = QWidget(); panel.setFixedWidth(250); l = QVBoxLayout()
-        l.addWidget(QLabel("SYSTEM LOGS")); self.log_box = QTextEdit(); self.log_box.setReadOnly(True)
+        l.addWidget(QLabel("MISSION LOGS")); self.log_box = QTextEdit(); self.log_box.setReadOnly(True)
         l.addWidget(self.log_box); panel.setLayout(l); self.layout_main.addWidget(panel)
         
     def fit_view_to_screen(self):
@@ -827,22 +599,49 @@ class MainWindow(QMainWindow):
     def generate_maze(self, mode):
         self.log(f"Generating Mode {mode}..."); diff = self.spin_diff.value(); exits = self.spin_exits.value()
         ball_conf = {'min': self.spin_balls_min.value(), 'max': self.spin_balls_max.value()} if mode == 2 else None
+        
+        # Reset Loaded State
+        self.loaded_pixmap = None
+        
         self.maze_image, self.balls = MazeGenerator.generate(diff, exits, ball_conf)
         self.display_maze()
         self.btn_run1.setEnabled(True); self.btn_run2.setEnabled(len(self.balls)>0)
         self.log(f"Generated. Balls: {len(self.balls)}")
 
     def display_maze(self):
-        if self.maze_image is None: return
-        h, w = self.maze_image.shape; qimg = QImage(self.maze_image.data, w, h, w, QImage.Format.Format_Grayscale8)
-        scale = max(1, 800 // max(w, h)); self.current_scale = scale
-        qpix = QPixmap.fromImage(qimg).scaled(w*scale, h*scale, Qt.AspectRatioMode.KeepAspectRatio)
-        self.scene.clear(); self.scene.addPixmap(qpix); self.scene.setSceneRect(0, 0, w*scale, h*scale)
-        if self.balls:
-            ball_colors = {0: Qt.GlobalColor.red, 1: Qt.GlobalColor.green, 2: Qt.GlobalColor.blue}
-            for b in self.balls:
-                r, c = b['loc']; x, y = c * scale, r * scale; rad = scale / 1.5
-                self.scene.addEllipse(x + scale/2 - rad, y + scale/2 - rad, rad*2, rad*2, QPen(Qt.GlobalColor.black), QBrush(ball_colors[b['color']]))
+        # 1. DISPLAY LOGIC
+        self.scene.clear()
+        
+        if self.loaded_pixmap:
+            # Case A: Loaded Image -> Show exact original
+            w, h = self.loaded_pixmap.width(), self.loaded_pixmap.height()
+            self.scene.addPixmap(self.loaded_pixmap)
+            self.scene.setSceneRect(0, 0, w, h)
+            self.current_scale = 1.0 # Assume 1:1 for now, view handles zoom
+            
+            # NOTE: We do NOT draw balls here for loaded images because 
+            # they are already in the pixel data of self.loaded_pixmap.
+            
+        elif self.maze_image is not None:
+            # Case B: Generated Maze -> Construct visual from binary
+            h, w = self.maze_image.shape
+            qimg = QImage(self.maze_image.data, w, h, w, QImage.Format.Format_Grayscale8)
+            scale = max(1, 800 // max(w, h))
+            self.current_scale = scale
+            
+            qpix = QPixmap.fromImage(qimg).scaled(w*scale, h*scale, Qt.AspectRatioMode.KeepAspectRatio)
+            self.scene.addPixmap(qpix)
+            self.scene.setSceneRect(0, 0, w*scale, h*scale)
+            
+            # Draw Balls Overlay (Since they are not in the binary image)
+            if self.balls:
+                ball_colors = {0: Qt.GlobalColor.red, 1: Qt.GlobalColor.green, 2: Qt.GlobalColor.blue}
+                for b in self.balls:
+                    r, c = b['loc']
+                    x, y = c * scale, r * scale
+                    rad = scale / 1.5
+                    self.scene.addEllipse(x + scale/2 - rad, y + scale/2 - rad, rad*2, rad*2, 
+                                        QPen(Qt.GlobalColor.black), QBrush(ball_colors[b['color']]))
 
     def run_part1(self):
         if self.maze_image is None: return
@@ -880,58 +679,161 @@ class MainWindow(QMainWindow):
         self.btn_run1.setEnabled(active); self.btn_run2.setEnabled(active and len(self.balls)>0); self.btn_stop.setEnabled(not active)
 
     def draw_results(self, path, visited):
-        scale = self.current_scale; h, w = self.maze_image.shape
-        layer = QPixmap(w*scale, h*scale); layer.fill(Qt.GlobalColor.transparent); p = QPainter(layer)
+        # Determine scale based on whether it's loaded (scale=1) or generated (scale=calc)
+        scale = 1.0 if self.loaded_pixmap else self.current_scale
+        
+        h, w = self.maze_image.shape
+        layer = QPixmap(w*int(scale), h*int(scale))
+        layer.fill(Qt.GlobalColor.transparent)
+        p = QPainter(layer)
+        
+        # 1. Draw Visited Nodes (Yellow Transparency)
         if visited:
-            p.setBrush(QColor(255, 255, 0, 100)); p.setPen(Qt.PenStyle.NoPen)
-            for r, c in visited: p.drawRect(c*scale, r*scale, scale, scale)
+            p.setBrush(QColor(0, 0, 255, 100)) # Yellow transparent
+            p.setPen(Qt.PenStyle.NoPen)
+            for r, c in visited:
+                p.drawRect(int(c*scale), int(r*scale), int(max(1, scale)), int(max(1, scale)))
+        
+        # 2. Draw Path (Purple Line)
         if path and len(path) > 1:
-            pen = QPen(QColor(255, 0, 255)); pen.setWidth(max(2, int(scale/2))); p.setPen(pen)
-            p.drawPolyline([QPoint(int(c*scale+scale/2), int(r*scale+scale/2)) for r, c in path])
-        p.end(); self.scene.addPixmap(layer)
+            pen = QPen(QColor(255, 0, 255))
+            pen.setWidth(max(2, int(scale/2)))
+            p.setPen(pen)
+            
+            # If scale is 1, draw point to point. If scale > 1, draw center to center
+            offset = scale / 2 if scale > 1 else 0
+            
+            points = [QPoint(int(c*scale + offset), int(r*scale + offset)) for r, c in path]
+            p.drawPolyline(points)
+            
+        p.end()
+        self.scene.addPixmap(layer)
 
     def save_maze(self):
         if self.maze_image is None: return
         f, _ = QFileDialog.getSaveFileName(self, "Save Maze", "", "Images (*.png *.jpg *.jpeg *.bmp)")
         if f: 
-            QImage(self.maze_image.data, self.maze_image.shape[1], self.maze_image.shape[0], 
-                   self.maze_image.shape[1], QImage.Format.Format_Grayscale8).save(f)
+            # 1. Create Base Image (Grayscale)
+            h, w = self.maze_image.shape
+            base_img = QImage(self.maze_image.data, w, h, w, QImage.Format.Format_Grayscale8)
+            
+            # 2. Convert to RGB so we can draw colored balls
+            rgb_img = base_img.convertToFormat(QImage.Format.Format_RGB888)
+            
+            # 3. Draw Balls at Exact Coordinates
+            if self.balls:
+                painter = QPainter(rgb_img)
+                colors = {0: QColor(255, 0, 0), 1: QColor(0, 255, 0), 2: QColor(0, 0, 255)}
+                
+                for b in self.balls:
+                    r, c = b['loc']
+                    # Get color (default white if unknown)
+                    color = colors.get(b['color'], QColor(255, 255, 255))
+                    painter.setPen(color)
+                    # Draw EXACT pixel (x=c, y=r)
+                    painter.drawPoint(c, r)
+                
+                painter.end()
+
+            # 4. Save
+            rgb_img.save(f)
             self.log(f"Saved to {f}")
+
+    def get_blob_centers(self, mask):
+        """
+        Uses connected components to find one center point per ball blob.
+        Fallback to manual calculation if OpenCV is missing.
+        """
+        centers = []
+        if OPENCV_AVAILABLE:
+            # OpenCV Connected Components
+            num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(mask.astype(np.uint8), connectivity=8)
+            
+            # Start from 1 (0 is background)
+            for i in range(1, num_labels):
+                area = stats[i, cv2.CC_STAT_AREA]
+                if area < 3: continue  # Ignore tiny noise
+                
+                # Centroid is (x, y) -> (col, row)
+                cx, cy = centroids[i]
+                centers.append((int(cy), int(cx)))
+        else:
+            # Fallback: Simple distance check (Dedup pixels)
+            points = np.argwhere(mask)
+            valid_balls = []
+            for r, c in points:
+                too_close = False
+                for vr, vc in valid_balls:
+                    if math.hypot(r-vr, c-vc) < 8: # Min distance 8 pixels
+                        too_close = True
+                        break
+                if not too_close:
+                    valid_balls.append((r, c))
+            centers = valid_balls
+            
+        return centers
 
     def load_maze(self):
         f, _ = QFileDialog.getOpenFileName(self, "Load Maze", "", "Images (*.png *.jpg *.jpeg *.bmp)")
         if f:
-            # 1. Load image (supports JPG via Qt)
-            qimg = QImage(f).convertToFormat(QImage.Format.Format_Grayscale8)
-            if qimg.isNull(): return
+            # 1. LOAD FOR VISUALS (High Quality)
+            self.loaded_pixmap = QPixmap(f)
             
-            # 2. Convert to Numpy
-            w, h = qimg.width(), qimg.height()
-            stride = qimg.bytesPerLine()
-            ptr = qimg.bits()
-            ptr.setsize(h * stride)
-            raw_arr = np.frombuffer(ptr, np.uint8).reshape((h, stride))
-            gray_data = raw_arr[:, :w].copy() # Copy to ensure we can modify it
+            # 2. LOAD FOR LOGIC (Numpy Analysis)
+            # Load as RGB for ball detection
+            qimg_color = QImage(f).convertToFormat(QImage.Format.Format_RGB888)
+            if qimg_color.isNull(): return
             
-            # 3. Apply Noise Reduction (If Checked and Available)
-            if self.check_noise.isChecked():
-                if OPENCV_AVAILABLE:
-                    # Median blur (Kernel 5) removes salt-and-pepper noise and softens JPEG artifacts
-                    gray_data = cv2.medianBlur(gray_data, 5)
-                    self.log("Applied Median Blur (Kernel 5).")
-                else:
-                    self.log("WARNING: OpenCV not installed. Skipping blur.")
+            w, h = qimg_color.width(), qimg_color.height()
+            ptr = qimg_color.bits()
+            ptr.setsize(h * w * 3)
+            rgb_arr = np.frombuffer(ptr, np.uint8).reshape((h, w, 3)).copy()
 
-            # 4. Threshold to Binary (Wall=0, Path=255)
-            # Simple fixed threshold > 128
+            self.balls = []
+            
+            # Detect Colors (Strict Thresholds)
+            mask_r = (rgb_arr[:,:,0] > 180) & (rgb_arr[:,:,1] < 100) & (rgb_arr[:,:,2] < 100)
+            mask_g = (rgb_arr[:,:,0] < 100) & (rgb_arr[:,:,1] > 180) & (rgb_arr[:,:,2] < 100)
+            mask_b = (rgb_arr[:,:,0] < 100) & (rgb_arr[:,:,1] < 100) & (rgb_arr[:,:,2] > 180)
+            
+            # Cluster Blobs
+            centers_r = self.get_blob_centers(mask_r)
+            centers_g = self.get_blob_centers(mask_g)
+            centers_b = self.get_blob_centers(mask_b)
+            
+            for r, c in centers_r: self.balls.append({'loc': (r, c), 'color': 0})
+            for r, c in centers_g: self.balls.append({'loc': (r, c), 'color': 1})
+            for r, c in centers_b: self.balls.append({'loc': (r, c), 'color': 2})
+
+            # Process Maze Structure (Grayscale)
+            qimg_gray = qimg_color.convertToFormat(QImage.Format.Format_Grayscale8)
+            stride = qimg_gray.bytesPerLine()
+            ptr_g = qimg_gray.bits()
+            ptr_g.setsize(h * stride)
+            gray_data = np.frombuffer(ptr_g, np.uint8).reshape((h, stride))
+            gray_data = gray_data[:, :w].copy()
+
+            if self.check_noise.isChecked() and OPENCV_AVAILABLE:
+                gray_data = cv2.medianBlur(gray_data, 5)
+
+            # Logic Maze (Binary)
             self.maze_image = np.where(gray_data > 128, 255, 0).astype(np.uint8)
 
-            # Reset state
-            self.balls = [] 
-            self.display_maze()
+            # Ensure Balls are Walkable in Logic
+            for b in self.balls:
+                br, bc = b['loc']
+                for dr in range(-1, 2):
+                    for dc in range(-1, 2):
+                        nr, nc = br+dr, bc+dc
+                        if 0 <= nr < h and 0 <= nc < w:
+                            self.maze_image[nr, nc] = PATH_COLOR
+
+            # UI Updates
+            self.display_maze() # Will use self.loaded_pixmap
             self.btn_run1.setEnabled(True)
-            self.btn_run2.setEnabled(False)
-            self.log(f"Loaded: {w}x{h}")
+            self.btn_run2.setEnabled(len(self.balls) > 0)
+            
+            self.log(f"Loaded: {w}x{h} | Balls detected: {len(self.balls)}")
 
     @pyqtSlot(str)
     def log(self, m): self.log_box.append(f"> {m}")
