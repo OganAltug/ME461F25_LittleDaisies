@@ -1,9 +1,0 @@
-/home/ogan/ME461F25_LittleDaisies/project/ros_ws/build/mobile_sensor/CMakeFiles/uninstall.dir
-/home/ogan/ME461F25_LittleDaisies/project/ros_ws/build/mobile_sensor/CMakeFiles/mobile_sensor_uninstall.dir
-/home/ogan/ME461F25_LittleDaisies/project/ros_ws/build/mobile_sensor/CMakeFiles/test.dir
-/home/ogan/ME461F25_LittleDaisies/project/ros_ws/build/mobile_sensor/CMakeFiles/edit_cache.dir
-/home/ogan/ME461F25_LittleDaisies/project/ros_ws/build/mobile_sensor/CMakeFiles/rebuild_cache.dir
-/home/ogan/ME461F25_LittleDaisies/project/ros_ws/build/mobile_sensor/CMakeFiles/list_install_components.dir
-/home/ogan/ME461F25_LittleDaisies/project/ros_ws/build/mobile_sensor/CMakeFiles/install.dir
-/home/ogan/ME461F25_LittleDaisies/project/ros_ws/build/mobile_sensor/CMakeFiles/install/local.dir
-/home/ogan/ME461F25_LittleDaisies/project/ros_ws/build/mobile_sensor/CMakeFiles/install/strip.dir
