@@ -15,7 +15,7 @@ It is collaboratively maintained by:
 |--------|--------------|
 | **hw/** | Homework assignments, including implementations such as the *Pico Game with brightness functionality*. |
 | **inclass/** | In-class notes, datasheets, and examples — e.g., *pico datasheet* and *week_4 materials*. |
-| **komponentler/** | Contains component lists, reference documents, and setup notes for Raspberry Pi Pico hardware. |
+| **components/** | Contains component lists, reference documents, and setup notes for Raspberry Pi Pico hardware. |
 | **pico/** | Additional notes, and microcontroller-specific scripts (e.g., PWM, ADC, GPIO usage). |
 | **README.md** | Project documentation and overview. |
 
@@ -24,8 +24,8 @@ It is collaboratively maintained by:
 ## ⚙️ Tools & Environment
 
 - **Microcontroller:** Raspberry Pi Pico / Pico W  
-- **Language:** MicroPython & C (via Pico SDK)  
-- **Development Tools:** Thonny, Visual Studio Code, or Pico SDK (CMake-based setup)  
+- **Language:** MicroPython  
+- **Development Tools:** Thonny, Visual Studio Code  
 - **Version Control:** Git & GitHub for collaborative development and tracking
 
 ---
@@ -43,9 +43,3 @@ This repository aims to:
 
 This project is created for educational purposes under **ME461 - Microcontroller Applications**.  
 Unless otherwise noted, the contents are shared under the [MIT License](https://opensource.org/licenses/MIT).
-
----
-
-### 📅 Last Updated
-`$(date +"%B %d, %Y")` — *(auto-updated when pushed to GitHub)*
-

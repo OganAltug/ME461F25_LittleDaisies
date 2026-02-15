@@ -10,3 +10,6 @@
 [submodule "pico/pico-Breadboard-Kit"]
 	path = pico/pico-Breadboard-Kit
 	url = git@github.com:rustemsevik/pico-Breadboard-Kit.git
+[submodule "project/pc_client_code/ros_ws/src/mobile_sensor"]
+	path = project/pc_client_code/ros_ws/src/mobile_sensor
+	url = https://github.com/VedantC2307/ros2-mobile-sensor-bridge.git
