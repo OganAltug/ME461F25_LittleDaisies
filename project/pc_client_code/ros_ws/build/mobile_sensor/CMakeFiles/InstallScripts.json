@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/ogan/ME461F25_LittleDaisies/project/ros_ws/build/mobile_sensor/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

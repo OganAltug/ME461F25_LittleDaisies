@@ -1,0 +1,7 @@
+[console_scripts]
+AAAA = camera_pkg.sebastian_vettel:main
+async_camera_subscriber = camera_pkg.camera_subscriber_async:main
+calibrator_node = camera_pkg.ros_calibration:main
+camera_publisher_node = camera_pkg.camera_publisher:main
+sync_camera_subscriber = camera_pkg.camera_subscriber_sync:main
+
