@@ -1,4 +1,4 @@
-# MECH461 MECHATRONIC COMPONENTS AND INSTRUMENTATION 
+# ME461 MECHATRONIC COMPONENTS AND INSTRUMENTATION 
 ![](https://github.com/OganAltug/ME461F25_LittleDaisies/blob/main/project/ronaldo.gif)
 
 This repository contains all coursework, lab work, and related materials for **ME461: Mechatronic Components and Instrumentation**.  
