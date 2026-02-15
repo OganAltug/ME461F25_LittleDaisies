@@ -14,10 +14,12 @@ It is collaboratively maintained by:
 
 | Folder | Description |
 |--------|--------------|
+| **components/** | Contains component lists, reference documents, and setup notes for Raspberry Pi Pico hardware. |
 | **hw/** | Homework assignments, including implementations such as the *Pico Game with brightness functionality*. |
 | **inclass/** | In-class notes, datasheets, and examples — e.g., *pico datasheet* and *week_4 materials*. |
-| **components/** | Contains component lists, reference documents, and setup notes for Raspberry Pi Pico hardware. |
+| **labs/** | Applications with common sensor and actuators. |
 | **pico/** | Additional notes, and microcontroller-specific scripts (e.g., PWM, ADC, GPIO usage). |
+| **project/** | Term project source code and design files. |
 | **README.md** | Project documentation and overview. |
 
 ---
